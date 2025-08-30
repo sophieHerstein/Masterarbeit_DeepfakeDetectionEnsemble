@@ -6,11 +6,11 @@ import os
 import csv
 from config import PROMPTS, CONFIG, CATEGORIES, VARIANTEN_BEKANNT, VARIANTEN_UNBEKANNT
 import torch
-from diffusers import StableDiffusion3Pipeline, DiffusionPipeline, StableDiffusionPipeline
+from diffusers import StableDiffusion3Pipeline, DiffusionPipeline, StableDiffusionPipeline, StableDiffusionXLPipeline
 from transformers import AutoModelForCausalLM
 import os
 from dotenv import load_dotenv
-from huggingface_hub import login
+from huggingface_hub import login, hf_hub_download
 
 load_dotenv()  # sucht automatisch nach .env im Projektordner
 hf_token = os.getenv("HF_TOKEN")
@@ -18,7 +18,7 @@ login(hf_token)
 
 def create_image(text_prompt, image_category, index):
     print(f"Create image for category '{image_category}' with prompt '{text_prompt}'")
-    generate_image_with_stable_diffusion_35(text_prompt, image_category, index)
+    # generate_image_with_stable_diffusion_35(text_prompt, image_category, index)
     generate_image_with_juggernaut_xl_v9(text_prompt, image_category, index)
     generate_image_with_dreamlike_photoreal_20(text_prompt, image_category, index)
 
@@ -59,9 +59,12 @@ def generate_image_with_stable_diffusion_35(text_prompt, image_category, index):
 def generate_image_with_juggernaut_xl_v9(text_prompt, image_category, index):
     print("Generating synthetic images with Juggernaut XL v9")
     image_output = get_image_output(image_category, 'juggernaut_xl_v9', text_prompt, index)
+
     pipe = DiffusionPipeline.from_pretrained("RunDiffusion/Juggernaut-XL-v9")
     image = pipe(text_prompt).images[0]
     image.save(image_output)
+
+
 
 # https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0
 def generate_image_with_dreamlike_photoreal_20(text_prompt, image_category, index):
@@ -87,7 +90,7 @@ def generate_image_with_nextstep_1_large(text_prompt, image_category, index):
 
 def get_image_output(image_category, model, text_prompt, index):
     image_out = os.path.join(CONFIG["images_path"], image_category, "synthetic", model, f"{image_category}_synthetic_{model}_{text_prompt.replace(" ", "-")}_{index}.jpg")
-    os.makedirs(os.path.dirname(image_out), exist_ok=True)
+    os.makedirs("../" + os.path.dirname(image_out), exist_ok=True)
     return image_out
 
 if __name__ == "__main__":
