@@ -1,9 +1,7 @@
 import csv
-import hashlib
 import os
 import re
 import sys
-from typing import Dict, Any, Optional
 
 from dotenv import load_dotenv
 from huggingface_hub import login, hf_hub_download, list_repo_files
@@ -30,16 +28,13 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 # ------------------------------------------------------------------------------
 # Globals (Pipelines werden einmalig geladen und wiederverwendet)
 # ------------------------------------------------------------------------------
-_PIPELINES: Dict[str, Any] = {}
-_HF_CACHE: Dict[str, str] = {}
+_PIPELINES = {}
+_HF_CACHE = {}
 
 # Einheitliche Inferenzparameter
 SD_STEPS = 28
 SD_GUIDE_SD35 = 3.5
 SD_GUIDE_OTHERS = 4.5
-
-GLOBAL_SEED = 42
-
 
 # ------------------------------------------------------------------------------
 # Utilities
@@ -48,15 +43,6 @@ def _slugify(text):
     text = re.sub(r"\s+", "-", text.strip())
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
     return text[:60] if len(text) > 60 else text
-
-
-def _gen(seed):
-    if seed is None:
-        return None
-    g = torch.Generator(device="cuda")
-    g.manual_seed(seed)
-    return g
-
 
 def get_image_output(image_category, model, image_prompt, index):
     p = _slugify(image_prompt)
@@ -148,7 +134,6 @@ def generate_image_with_stable_diffusion_35(gen_pipes, image_prompt, image_categ
         image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_SD35,
-        generator=_gen(GLOBAL_SEED),
     ).images[0]
     image.save(image_output)
     write_csv_row(image_category, image_prompt, "Stable Diffusion 3.5 Large", image_output)
@@ -161,7 +146,6 @@ def generate_image_with_juggernaut_xl_v9(gen_pipes, image_prompt, image_category
         prompt=image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_OTHERS,
-        generator=_gen(GLOBAL_SEED),
     ).images[0]
     image.save(image_output)
     write_csv_row(image_category, image_prompt, "Juggernaut XL v9", image_output)
@@ -174,7 +158,6 @@ def generate_image_with_dreamlike_photoreal_20(gen_pipes, image_prompt, image_ca
         image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_OTHERS,
-        generator=_gen(GLOBAL_SEED),
     ).images[0]
     image.save(image_output)
     write_csv_row(image_category, image_prompt, "Dreamlike PhotoReal 20", image_output)
