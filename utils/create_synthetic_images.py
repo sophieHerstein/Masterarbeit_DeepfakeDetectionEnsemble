@@ -1,5 +1,6 @@
 import csv
 import os
+import random
 import re
 import sys
 
@@ -59,15 +60,21 @@ def get_image_output(image_category, model, image_prompt, index):
     return image_out
 
 
-def write_csv_row(image_category, image_prompt, model, image_path):
+def write_csv_row(image_category, image_prompt, model, image_path, seed):
     csv_file = os.path.join(PROJECT_ROOT, CONFIG["synthetic_images_log_path"])
     os.makedirs(os.path.dirname(csv_file), exist_ok=True)
     write_header = not os.path.exists(csv_file)
     with open(csv_file, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if write_header:
-            writer.writerow(["Kategorie", "Prompt", "Modell", "Path"])
-        writer.writerow([image_category, image_prompt, model, image_path])
+            writer.writerow(["Kategorie", "Prompt", "Modell", "Path", "Seed"])
+        writer.writerow([image_category, image_prompt, model, image_path, seed])
+
+def make_generator():
+    seed = random.randint(1, 100000)
+    g = torch.Generator(device="cuda")
+    g.manual_seed(seed)
+    return g, seed
 
 
 # ------------------------------------------------------------------------------
@@ -127,45 +134,52 @@ def get_or_create_pipelines():
 # ------------------------------------------------------------------------------
 # Generatoren
 # ------------------------------------------------------------------------------
-def generate_image_with_stable_diffusion_35(gen_pipes, image_prompt, image_category, index):
+def generate_image_with_stable_diffusion_35(gen_pipes, image_prompt, image_category):
     print("Generating synthetic images with Stable Diffusion 3.5 Large")
-    image_output = get_image_output(image_category, "stable_diffusion_35", image_prompt, index)
+    gen, used_seed = make_generator()
+    image_output = get_image_output(image_category, "stable_diffusion_35", image_prompt, used_seed)
     image = gen_pipes["sd35"](
         image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_SD35,
+        generator=gen
     ).images[0]
     image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Stable Diffusion 3.5 Large", image_output)
+    write_csv_row(image_category, image_prompt, "Stable Diffusion 3.5 Large", image_output, used_seed)
 
 
-def generate_image_with_juggernaut_xl_v9(gen_pipes, image_prompt, image_category, index):
+def generate_image_with_juggernaut_xl_v9(gen_pipes, image_prompt, image_category):
     print("Generating synthetic images with Juggernaut XL v9")
-    image_output = get_image_output(image_category, "juggernaut_xl_v9", image_prompt, index)
+    gen, used_seed = make_generator()
+    image_output = get_image_output(image_category, "juggernaut_xl_v9", image_prompt, used_seed)
     image = gen_pipes["jug"](
         prompt=image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_OTHERS,
+        generator=gen
     ).images[0]
     image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Juggernaut XL v9", image_output)
+    write_csv_row(image_category, image_prompt, "Juggernaut XL v9", image_output, used_seed)
 
 
-def generate_image_with_dreamlike_photoreal_20(gen_pipes, image_prompt, image_category, index):
+def generate_image_with_dreamlike_photoreal_20(gen_pipes, image_prompt, image_category):
     print("Generating synthetic images with Dreamlike PhotoReal 20")
-    image_output = get_image_output(image_category, "dreamlike_photoreal_20", image_prompt, index)
+    gen, used_seed = make_generator()
+    image_output = get_image_output(image_category, "dreamlike_photoreal_20", image_prompt, used_seed)
     image = gen_pipes["dl20"](
         image_prompt,
         num_inference_steps=SD_STEPS,
         guidance_scale=SD_GUIDE_OTHERS,
+        generator=gen
     ).images[0]
     image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Dreamlike PhotoReal 20", image_output)
+    write_csv_row(image_category, image_prompt, "Dreamlike PhotoReal 20", image_output, used_seed)
 
 
-def generate_image_with_nextstep_1_large(gen_pipes, image_prompt, image_category, index):
+def generate_image_with_nextstep_1_large(gen_pipes, image_prompt, image_category):
     print("Generating synthetic images with NextStep 1 Large")
-    image_output = get_image_output(image_category, "nextstep_1", image_prompt, index)
+    gen, used_seed = make_generator()
+    image_output = get_image_output(image_category, "nextstep_1", image_prompt, used_seed)
     image = gen_pipes["ns1"].generate_image(
         image_prompt,
         hw=(512, 512),
@@ -176,24 +190,25 @@ def generate_image_with_nextstep_1_large(gen_pipes, image_prompt, image_category
         use_norm=False,
         num_sampling_steps=SD_STEPS,
         timesteps_shift=1.0,
+        generator=gen
     )[0]
     image.save(image_output)
-    write_csv_row(image_category, image_prompt, "NextStep-1-Large", image_output)
+    write_csv_row(image_category, image_prompt, "NextStep-1-Large", image_output, used_seed)
 
 
 # ------------------------------------------------------------------------------
 # High-level Wrapper
 # ------------------------------------------------------------------------------
-def create_image(pipelines, image_prompt, image_category, index):
+def create_image(pipelines, image_prompt, image_category):
     print(f"Create image for category '{image_category}' with prompt '{image_prompt}'")
-    generate_image_with_stable_diffusion_35(pipelines, image_prompt, image_category, index)
-    generate_image_with_juggernaut_xl_v9(pipelines, image_prompt, image_category, index)
-    generate_image_with_dreamlike_photoreal_20(pipelines, image_prompt, image_category, index)
+    generate_image_with_stable_diffusion_35(pipelines, image_prompt, image_category)
+    generate_image_with_juggernaut_xl_v9(pipelines, image_prompt, image_category)
+    generate_image_with_dreamlike_photoreal_20(pipelines, image_prompt, image_category)
 
 
-def create_images_unbekannt(pipelines, image_prompt, image_category, index):
+def create_images_unbekannt(pipelines, image_prompt, image_category):
     print(f"Create images for unbekannten Datensatz for category '{image_category}' with prompt '{image_prompt}'")
-    generate_image_with_nextstep_1_large(pipelines, image_prompt, image_category, index)
+    generate_image_with_nextstep_1_large(pipelines, image_prompt, image_category)
 
 
 # ------------------------------------------------------------------------------
@@ -210,10 +225,10 @@ if __name__ == "__main__":
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
             for i in range(VARIANTEN_BEKANNT):
-                create_image(pipes, prompt, category, i)
+                create_image(pipes, prompt, category)
 
             for j in range(VARIANTEN_UNBEKANNT):
-                create_images_unbekannt(pipes, prompt, category, j)
+                create_images_unbekannt(pipes, prompt, category)
 
     print("DONE")
 
