@@ -1,0 +1,8 @@
+synthetische Bilder - Modelle (3 Diffusion + 3 GAN/ 1 Diffusion + 1 GAN)
+#1050                        175           175    75            75
+
+real Bilder - Datensätze (Pexels + Pixabay + kaggle/ kaggle)
+#2100                   700    + 700     + 700   / 300
+
+manipulierte Bilder - Modelle (3 Diffusion + 3 GAN/ 1 Diffusion + 1 GAN)
+#1050                        175           175    75            75
