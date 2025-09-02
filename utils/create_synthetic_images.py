@@ -54,7 +54,7 @@ def get_image_output(image_category, model, image_prompt, index):
         image_category,
         "synthetic",
         model,
-        name,
+        name
     )
     os.makedirs(os.path.dirname(image_out), exist_ok=True)
     return image_out
@@ -95,7 +95,7 @@ def get_or_create_pipelines():
     # SD 3.5 Large
     _PIPELINES["sd35"] = StableDiffusion3Pipeline.from_pretrained(
         "stabilityai/stable-diffusion-3.5-large",
-        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     ).to("cuda" if torch.cuda.is_available() else "cpu")
 
     # Juggernaut XL v9 (SDXL Safetensors)
@@ -126,7 +126,7 @@ def get_or_create_pipelines():
         tokenizer=tokenizer,
         model=model,
         vae_name_or_path=os.path.join(NEXTSTEP_DIR, "vae"),
-    ).to(device="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32)
+    ).to(device="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.float16 if torch.cuda.is_available() else torch.float32)
 
     return _PIPELINES
 
