@@ -5,7 +5,14 @@ CATEGORIES = ["human", "building", "landscape"]
 VARIANTEN_BEKANNT = 14
 VARIANTEN_UNBEKANNT = 6
 
-MODELS = [] #todo: ergänzen
+MODELS = [
+    "xception71",
+	"mobilenetv2_100",
+    "tf_efficientnet_b3",
+	"densenet121",
+	"resnet50d",
+	"convnext_small"
+]
 
 # enthält Pfade usw.
 CONFIG = {
