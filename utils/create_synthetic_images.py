@@ -8,12 +8,8 @@ from dotenv import load_dotenv
 from huggingface_hub import login, hf_hub_download, list_repo_files
 import torch
 
-from diffusers import StableDiffusion3Pipeline, StableDiffusionPipeline, StableDiffusionXLPipeline
-
-
-from transformers import AutoTokenizer, AutoModel
-
-from NextStep1Large.models.gen_pipeline import NextStepPipeline
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, DiffusionPipeline, AutoPipelineForText2Image, \
+    DPMSolverMultistepScheduler
 
 from config import PROMPTS, CONFIG, CATEGORIES, VARIANTEN_BEKANNT, VARIANTEN_UNBEKANNT
 
@@ -21,7 +17,6 @@ from config import PROMPTS, CONFIG, CATEGORIES, VARIANTEN_BEKANNT, VARIANTEN_UNB
 # Pfade & Umgebungsvariablen
 # ------------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NEXTSTEP_DIR = os.path.join(PROJECT_ROOT, "NextStep1Large")
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -29,14 +24,12 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 # ------------------------------------------------------------------------------
 # Globals (Pipelines werden einmalig geladen und wiederverwendet)
 # ------------------------------------------------------------------------------
-_PIPELINES = {}
 _HF_CACHE = {}
 
 # Einheitliche Inferenzparameter
-SD_STEPS = 28
-SD_GUIDE_SD35 = 3.5
-SD_GUIDE_OTHERS = 4.5
-
+STEPS = 28
+GUIDANCE_SCALE = 4.5
+SIZE = 512
 # ------------------------------------------------------------------------------
 # Utilities
 # ------------------------------------------------------------------------------
@@ -45,19 +38,20 @@ def _slugify(text):
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
     return text[:60] if len(text) > 60 else text
 
-def get_image_output(image_category, model, image_prompt, index):
+def get_image_output(image_category, model, image_prompt, index, unknown = False):
     p = _slugify(image_prompt)
     name = f"{image_category}_synthetic_{model}_{p}_{index}.jpg"
     image_out = os.path.join(
         PROJECT_ROOT,
         CONFIG["images_path"],
+        "unknown" if unknown else "known",
         image_category,
         "synthetic",
         model,
         name
     )
     os.makedirs(os.path.dirname(image_out), exist_ok=True)
-    return image_out
+    return image_out, name
 
 
 def write_csv_row(image_category, image_prompt, model, image_path, seed):
@@ -76,29 +70,38 @@ def make_generator():
     g.manual_seed(seed)
     return g, seed
 
-
 # ------------------------------------------------------------------------------
-# Pipelines laden (einmalig)
+# Generatoren
 # ------------------------------------------------------------------------------
-def get_or_create_pipelines():
-    if _PIPELINES:
-        return _PIPELINES
+def generate_image_with_stable_diffusion_xl_base_10():
+    print("Generating synthetic images with Stable Diffusion XL Base 1.0")
+    pipe = DiffusionPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-xl-base-1.0",
+        torch_dtype=torch.float16, use_safetensors=True, variant="fp16"
+    ).to("cuda")
+    for category in CATEGORIES:
+        for prompt in PROMPTS[category]:
+            for _ in range(VARIANTEN_BEKANNT):
+                print(f"Create image for category '{category}' with prompt '{prompt}'")
+                gen, used_seed = make_generator()
+                image_output, name = get_image_output(category, "stable_diffusion_xl_base_10", prompt, used_seed)
+                image = pipe(
+                    prompt,
+                    height=SIZE,
+                    width=SIZE,
+                    num_inference_steps=STEPS,
+                    guidance_scale=GUIDANCE_SCALE,
+                    generator=gen
+                ).images[0]
+                image.save(image_output)
+                write_csv_row(category, prompt, "Stable Diffusion XL Base 1.0", name, used_seed)
 
-    if not torch.cuda.is_available():
-        print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
+    del pipe
+    torch.cuda.empty_cache()
 
-    # Hugging Face Login
-    if not HF_TOKEN:
-        raise EnvironmentError("HF_TOKEN fehlt in .env – benötigt für SD3.5/Juggernaut.")
-    login(token=HF_TOKEN, add_to_git_credential=True)
 
-    # SD 3.5 Large
-    _PIPELINES["sd35"] = StableDiffusion3Pipeline.from_pretrained(
-        "stabilityai/stable-diffusion-3.5-large",
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    ).to("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Juggernaut XL v9 (SDXL Safetensors)
+def generate_image_with_juggernaut_xl_v9():
+    print("Generating synthetic images with Juggernaut XL v9")
     files = list_repo_files("RunDiffusion/Juggernaut-XL-v9")
     safes = [f for f in files if f.lower().endswith(".safetensors")]
     if not safes:
@@ -107,108 +110,97 @@ def get_or_create_pipelines():
     cand = sdxl_candidates[0] if sdxl_candidates else safes[0]
     if "jug_ckpt" not in _HF_CACHE:
         _HF_CACHE["jug_ckpt"] = hf_hub_download("RunDiffusion/Juggernaut-XL-v9", cand)
-    _PIPELINES["jug"] = StableDiffusionXLPipeline.from_single_file(
+    pipe = StableDiffusionXLPipeline.from_single_file(
         _HF_CACHE["jug_ckpt"],
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
         use_safetensors=True,
-    ).to("cuda" if torch.cuda.is_available() else "cpu")
+    ).to("cuda")
+    for category in CATEGORIES:
+        for prompt in PROMPTS[category]:
+            for _ in range(VARIANTEN_BEKANNT):
+                print(f"Create image for category '{category}' with prompt '{prompt}'")
+                gen, used_seed = make_generator()
+                image_output, name = get_image_output(category, "juggernaut_xl_v9", prompt, used_seed)
+                image = pipe(
+                    prompt=prompt,
+                    height=SIZE,
+                    width=SIZE,
+                    num_inference_steps=STEPS,
+                    guidance_scale=GUIDANCE_SCALE,
+                    generator=gen
+                ).images[0]
+                image.save(image_output)
+                write_csv_row(category, prompt, "Juggernaut XL v9", name, used_seed)
 
-    # Dreamlike Photoreal 2.0
-    _PIPELINES["dl20"] = StableDiffusionPipeline.from_pretrained(
+    del pipe
+    torch.cuda.empty_cache()
+
+
+def generate_image_with_dreamlike_photoreal_20():
+    print("Generating synthetic images with Dreamlike PhotoReal 20")
+    pipe = StableDiffusionPipeline.from_pretrained(
         "dreamlike-art/dreamlike-photoreal-2.0",
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    ).to("cuda" if torch.cuda.is_available() else "cpu")
+    ).to("cuda")
+    for category in CATEGORIES:
+        for prompt in PROMPTS[category]:
+            for _ in range(VARIANTEN_BEKANNT):
+                print(f"Create image for category '{category}' with prompt '{prompt}'")
+                gen, used_seed = make_generator()
+                image_output, name = get_image_output(category, "dreamlike_photoreal_20", prompt, used_seed)
+                image = pipe(
+                    prompt,
+                    height=SIZE,
+                    width=SIZE,
+                    num_inference_steps=STEPS,
+                    guidance_scale=GUIDANCE_SCALE,
+                    generator=gen
+                ).images[0]
+                image.save(image_output)
+                write_csv_row(category, prompt, "Dreamlike PhotoReal 20", name, used_seed)
 
-    # NextStep 1 Large (lokal)
-    tokenizer = AutoTokenizer.from_pretrained("stepfun-ai/NextStep-1-Large", trust_remote_code=True)
-    model = AutoModel.from_pretrained(NEXTSTEP_DIR, trust_remote_code=True)
-    _PIPELINES["ns1"] = NextStepPipeline(
-        tokenizer=tokenizer,
-        model=model,
-        vae_name_or_path=os.path.join(NEXTSTEP_DIR, "vae"),
-    ).to(device="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.float16 if torch.cuda.is_available() else torch.float32)
-
-    return _PIPELINES
-
-
-# ------------------------------------------------------------------------------
-# Generatoren
-# ------------------------------------------------------------------------------
-def generate_image_with_stable_diffusion_35(gen_pipes, image_prompt, image_category):
-    print("Generating synthetic images with Stable Diffusion 3.5 Large")
-    gen, used_seed = make_generator()
-    image_output = get_image_output(image_category, "stable_diffusion_35", image_prompt, used_seed)
-    image = gen_pipes["sd35"](
-        image_prompt,
-        num_inference_steps=SD_STEPS,
-        guidance_scale=SD_GUIDE_SD35,
-        generator=gen
-    ).images[0]
-    image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Stable Diffusion 3.5 Large", image_output, used_seed)
+    del pipe
+    torch.cuda.empty_cache()
 
 
-def generate_image_with_juggernaut_xl_v9(gen_pipes, image_prompt, image_category):
-    print("Generating synthetic images with Juggernaut XL v9")
-    gen, used_seed = make_generator()
-    image_output = get_image_output(image_category, "juggernaut_xl_v9", image_prompt, used_seed)
-    image = gen_pipes["jug"](
-        prompt=image_prompt,
-        num_inference_steps=SD_STEPS,
-        guidance_scale=SD_GUIDE_OTHERS,
-        generator=gen
-    ).images[0]
-    image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Juggernaut XL v9", image_output, used_seed)
+def generate_image_with_dreamshaper():
+    print("Generating synthetic images with Dreamshaper XL v2 Turbo")
+    pipe = AutoPipelineForText2Image.from_pretrained('lykon/dreamshaper-xl-v2-turbo', torch_dtype=torch.float16,
+                                                     variant="fp16")
+    pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+    pipe = pipe.to("cuda")
+    for category in CATEGORIES:
+        for prompt in PROMPTS[category]:
+            for i in range(VARIANTEN_UNBEKANNT):
+                print(f"Create image for category '{category}' with prompt '{prompt}'")
+                gen, used_seed = make_generator()
+                image_output, name = get_image_output(category, "dreamshaper", prompt, used_seed, True)
+                image = pipe(
+                    prompt,
+                    height=SIZE,
+                    width=SIZE,
+                    guidance_scale=GUIDANCE_SCALE,
+                    num_inference_steps=STEPS,
+                    generator=gen
+                ).images[0]
+                image.save(image_output)
+                write_csv_row(category, prompt, "dreamshaper", name, used_seed)
 
-
-def generate_image_with_dreamlike_photoreal_20(gen_pipes, image_prompt, image_category):
-    print("Generating synthetic images with Dreamlike PhotoReal 20")
-    gen, used_seed = make_generator()
-    image_output = get_image_output(image_category, "dreamlike_photoreal_20", image_prompt, used_seed)
-    image = gen_pipes["dl20"](
-        image_prompt,
-        num_inference_steps=SD_STEPS,
-        guidance_scale=SD_GUIDE_OTHERS,
-        generator=gen
-    ).images[0]
-    image.save(image_output)
-    write_csv_row(image_category, image_prompt, "Dreamlike PhotoReal 20", image_output, used_seed)
-
-
-def generate_image_with_nextstep_1_large(gen_pipes, image_prompt, image_category):
-    print("Generating synthetic images with NextStep 1 Large")
-    gen, used_seed = make_generator()
-    image_output = get_image_output(image_category, "nextstep_1", image_prompt, used_seed)
-    image = gen_pipes["ns1"].generate_image(
-        image_prompt,
-        hw=(512, 512),
-        num_images_per_caption=1,
-        cfg=7.5,
-        cfg_img=1.0,
-        cfg_schedule="constant",
-        use_norm=False,
-        num_sampling_steps=SD_STEPS,
-        timesteps_shift=1.0,
-        generator=gen
-    )[0]
-    image.save(image_output)
-    write_csv_row(image_category, image_prompt, "NextStep-1-Large", image_output, used_seed)
+    del pipe
+    torch.cuda.empty_cache()
 
 
 # ------------------------------------------------------------------------------
 # High-level Wrapper
 # ------------------------------------------------------------------------------
-def create_image(pipelines, image_prompt, image_category):
-    print(f"Create image for category '{image_category}' with prompt '{image_prompt}'")
-    generate_image_with_stable_diffusion_35(pipelines, image_prompt, image_category)
-    generate_image_with_juggernaut_xl_v9(pipelines, image_prompt, image_category)
-    generate_image_with_dreamlike_photoreal_20(pipelines, image_prompt, image_category)
+def create_images():
+    generate_image_with_stable_diffusion_xl_base_10()
+    generate_image_with_dreamlike_photoreal_20()
+    generate_image_with_juggernaut_xl_v9()
 
 
-def create_images_unbekannt(pipelines, image_prompt, image_category):
-    print(f"Create images for unbekannten Datensatz for category '{image_category}' with prompt '{image_prompt}'")
-    generate_image_with_nextstep_1_large(pipelines, image_prompt, image_category)
+def create_images_unbekannt():
+    generate_image_with_dreamshaper()
 
 
 # ------------------------------------------------------------------------------
@@ -216,19 +208,18 @@ def create_images_unbekannt(pipelines, image_prompt, image_category):
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
     print("Starting ....")
-    print("CUDA verfügbar:", torch.cuda.is_available())
 
-    # Pipelines einmalig laden
-    pipes = get_or_create_pipelines()
+    if not torch.cuda.is_available():
+        print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
 
-    # Hauptschleife
-    for category in CATEGORIES:
-        for prompt in PROMPTS[category]:
-            for i in range(VARIANTEN_BEKANNT):
-                create_image(pipes, prompt, category)
+    # Hugging Face Login
+    if not HF_TOKEN:
+        raise EnvironmentError("HF_TOKEN fehlt in .env")
+    login(token=HF_TOKEN, add_to_git_credential=True)
 
-            for j in range(VARIANTEN_UNBEKANNT):
-                create_images_unbekannt(pipes, prompt, category)
+
+    create_images()
+    create_images_unbekannt()
 
     print("DONE")
 
