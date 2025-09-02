@@ -2,8 +2,8 @@
 CATEGORIES = ["human", "building", "landscape"]
 
 # Anzahl der Varianten je Prompt
-VARIANTEN_BEKANNT = 7
-VARIANTEN_UNBEKANNT = 3
+VARIANTEN_BEKANNT = 14
+VARIANTEN_UNBEKANNT = 6
 
 MODELS = [
     "xception71",
@@ -23,7 +23,7 @@ CONFIG = {
 
 # Prompts für synthetische Bilder
 PROMPTS = {
-    "human": [ # → 25 Prompts á 7 Varianten bzw. á 3 Varianten für unbekannten Datensatz
+    "human": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "photo of a young boy with curly hair, smiling outdoors in the park",
         "photo of a young woman with dyed blue hair, street style fashion",
         "portrait photo of a young Asian woman with long black hair, natural daylight, 50mm lens",
@@ -50,7 +50,7 @@ PROMPTS = {
         "portrait of a middle-aged woman with short hair, workplace setting",
         "photo of a diverse group of five people posing outdoors, wide shot"
     ],
-    "building": [ # → 25 Prompts á 7 Varianten bzw. á 3 Varianten für unbekannten Datensatz
+    "building": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "modern glass skyscraper in city center, photographed at dusk",
         "old European cathedral with gothic details, daylight",
         "traditional Japanese wooden house, garden with lanterns",
@@ -77,7 +77,7 @@ PROMPTS = {
         "ancient Roman amphitheater ruins",
         "small countryside church with stone walls"
     ],
-    "landscape": [ # → 25 Prompts á 7 Varianten bzw. á 3 Varianten für unbekannten Datensatz
+    "landscape": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "alpine mountain landscape at sunrise, snow peaks glowing",
         "dense rainforest with mist, sunlight filtering through trees",
         "desert dunes under clear blue sky, detailed sand textures",
