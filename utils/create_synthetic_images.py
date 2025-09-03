@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from huggingface_hub import login, hf_hub_download, list_repo_files
 import torch
 
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, DiffusionPipeline, AutoPipelineForText2Image, \
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
     DPMSolverMultistepScheduler
 
 from config import PROMPTS, CONFIG, CATEGORIES, VARIANTEN_BEKANNT, VARIANTEN_UNBEKANNT
