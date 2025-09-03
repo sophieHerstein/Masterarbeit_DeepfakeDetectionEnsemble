@@ -2,11 +2,11 @@ import os
 import re
 import csv
 import random
-from typing import List, Tuple, Dict
-from dataclasses import dataclass
+import sys
 from PIL import Image, ImageDraw
 import torch
-
+import time
+import argparse
 from dotenv import load_dotenv
 from huggingface_hub import login
 
@@ -17,6 +17,9 @@ from diffusers import (
     StableDiffusionInstructPix2PixPipeline,
 )
 
+from utils.config import EDIT_LIBRARY, CATEGORIES, CONFIG
+from utils.prompt_balancer import PromptBalancer
+
 # ------------------------------------------------------------
 # Config / Globals
 # ------------------------------------------------------------
@@ -25,40 +28,44 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Ersetze das bei Bedarf durch deine zentrale CONFIG
-CONFIG = {
-    "images_path": "images",  # relativer Pfad unter PROJECT_ROOT
-    "manipulated_images_log_path": "logs/manipulated_images.csv",
-    "image_size_sd15": 512,
-    "image_size_sdxl": 1024,
-    "steps": 30,
-    "guidance": 5.0,
-    "rng_seed": 42,  # fixe Seedauswahl -> reproduzierbar für Bildliste
-}
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA = []
+FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ = []
+FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE = []
 
-# Kategorien wie bei dir (anpassen!)
-CATEGORIES = ["landscape", "building", "face"]
+FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ = []
+FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE = []
+FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET = []
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.float16 if torch.cuda.is_available() else torch.float32
+RNG = random.Random(42)
 
-# Pipelines werden gecacht
+BALANCER = PromptBalancer(
+    edit_library=EDIT_LIBRARY,
+    rng=RNG,
+    config=CONFIG,
+    project_root=PROJECT_ROOT,
+)
+
+
+STEPS = 40
+GUIDANCE_SCALE = 4.5
+
 _PIPE_CACHE = {}
 
 # ------------------------------------------------------------
 # Utility
 # ------------------------------------------------------------
-def _slugify(text: str) -> str:
+def _slugify(text):
     text = re.sub(r"\s+", "-", text.strip())
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
     return text[:80]
 
-def _ensure_rgb(img: Image.Image) -> Image.Image:
+def _ensure_rgb(img):
     if img.mode != "RGB":
         return img.convert("RGB")
     return img
 
-def _read_images_from(folder: str) -> List[str]:
+def _read_images_from(folder):
     if not os.path.isdir(folder):
         return []
     files = []
@@ -68,11 +75,12 @@ def _read_images_from(folder: str) -> List[str]:
     files.sort()
     return files
 
-def _choose_half(files: List[str], rng: random.Random) -> List[str]:
+def _choose_half(files):
     n = len(files) // 2
-    return rng.sample(files, n) if n > 0 else []
+    return RNG.sample(files, n) if n > 0 else []
 
-def _save_and_log(csv_path: str, row: List[str]):
+def _save_and_log(row):
+    csv_path = CONFIG["manipulated_images_log_path"]
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     write_header = not os.path.exists(csv_path)
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
@@ -81,114 +89,74 @@ def _save_and_log(csv_path: str, row: List[str]):
             w.writerow(["KnownOrUnknown","Kategorie","OriginalPath","Modell","EditType","InstructionOrPrompt","Seed","OutputPath"])
         w.writerow(row)
 
-def _output_path(original_path: str, known_or_unknown: str, category: str, model_name: str, seed: int) -> str:
+def _output_path(original_path, known_or_unknown, category, model_name, seed):
     images_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"])
     base = os.path.splitext(os.path.basename(original_path))[0]
     out_dir = os.path.join(images_root, known_or_unknown, category, "manipulated", model_name)
     os.makedirs(out_dir, exist_ok=True)
-    return os.path.join(out_dir, f"{base}_seed{seed}.jpg")
+    return os.path.join(out_dir, f"{base}_manipulated_{seed}.jpg")
 
-def _resize_for_model(img: Image.Image, is_sdxl: bool) -> Image.Image:
-    target = CONFIG["image_size_sdxl"] if is_sdxl else CONFIG["image_size_sd15"]
-    return img.resize((target, target), Image.BICUBIC)
-
-def _torch_generator() -> Tuple[torch.Generator, int]:
+def _torch_generator():
     seed = random.randint(1, 1_000_000)
-    g = torch.Generator(device=DEVICE)
+    g = torch.Generator(device="cuda")
     g.manual_seed(seed)
     return g, seed
 
 # ------------------------------------------------------------
-# Edit Prompts / Instructions (einfach erweiterbar)
-# ------------------------------------------------------------
-EDIT_LIBRARY = {
-    "landscape": {
-        "img2img": [
-            "a moody night scene with stars and moonlight",
-            "a foggy, rainy atmosphere with overcast sky",
-            "golden hour lighting, warm tones, soft sun rays",
-            "winter scene with fresh snow on the ground and trees",
-        ],
-        "inpaint_add": [
-            "add a small wooden cabin",
-            "add a winding dirt path",
-            "add a red car on a distant road",
-            "add a flock of birds in the sky",
-        ],
-        "instruction": [
-            "turn the scene into a snowy winter landscape",
-            "make it nighttime with a starry sky",
-            "add a small wooden cabin near the center",
-            "add light rain and fog",
-        ],
-    },
-    "building": {
-        "img2img": [
-            "modern minimal style, concrete and glass, daytime",
-            "nocturnal city ambiance with neon signs",
-            "classic brick facade with ivy climbing the walls",
-            "sunset lighting, warm orange sky, long shadows",
-        ],
-        "inpaint_add": [
-            "add ivy on the facade",
-            "add a street lamp next to the entrance",
-            "add a small balcony",
-            "add graffiti art on the side wall",
-        ],
-        "instruction": [
-            "make it night with neon reflections",
-            "add ivy covering parts of the facade",
-            "turn the building into a warm sunset scene",
-            "add subtle graffiti on the side wall",
-        ],
-    },
-    "face": {
-        "img2img": [
-            "studio portrait lighting, soft light, shallow depth of field",
-            "outdoor lighting, overcast sky, soft diffuse light",
-            "cinematic portrait, warm tones, film grain",
-            "cool tones portrait, soft rim light",
-        ],
-        "inpaint_add": [
-            "add sunglasses",
-            "add a baseball cap",
-            "add freckles on the cheeks",
-            "add small hoop earrings",
-        ],
-        "instruction": [
-            "add sunglasses",
-            "change hair color to blonde",
-            "add freckles",
-            "add a subtle beard",
-        ],
-    },
-}
-
-def _pick_edit(category: str, kind: str, rng: random.Random) -> str:
-    options = EDIT_LIBRARY[category][kind]
-    return rng.choice(options)
-
-# ------------------------------------------------------------
 # Random Mask (für Inpainting)
 # ------------------------------------------------------------
-def _random_mask(img_size: Tuple[int,int], rng: random.Random) -> Image.Image:
+def _random_mask(img_size):
+    """
+    Erzeugt eine binäre Maske ("L") gleicher Größe wie das Bild.
+    Robuste Koordinaten, min. Größe je Shape, zufällig 2–4 Patches.
+    """
     w, h = img_size
     mask = Image.new("L", (w, h), 0)
     draw = ImageDraw.Draw(mask)
 
-    # 2-4 zufällige Ellipsen/Polygone
-    count = rng.randint(2, 4)
+    # Mindestgröße eines Elements (proportional, aber geklammert)
+    min_side = max(8, min(w, h) // 12)  # z.B. ~8–100px, je nach Bildgröße
+
+    def _sorted_coords(ax, ay, bx, by):
+        x0, x1 = (ax, bx) if ax <= bx else (bx, ax)
+        y0, y1 = (ay, by) if ay <= by else (by, ay)
+        # Mindestabstand erzwingen
+        if x1 - x0 < min_side:
+            x1 = min(w - 1, x0 + min_side)
+        if y1 - y0 < min_side:
+            y1 = min(h - 1, y0 + min_side)
+        return x0, y0, x1, y1
+
+    count = RNG.randint(2, 4)
     for _ in range(count):
-        x1 = rng.randint(0, int(0.6*w))
-        y1 = rng.randint(0, int(0.6*h))
-        x2 = rng.randint(int(0.4*w), w)
-        y2 = rng.randint(int(0.4*h), h)
-        if rng.random() < 0.5:
-            draw.ellipse([x1, y1, x2, y2], fill=255)
-        else:
-            # grobes Polygon
-            pts = [(rng.randint(0, w), rng.randint(0, h)) for _ in range(rng.randint(3,6))]
-            draw.polygon(pts, fill=255)
+        try:
+            # Zwei zufällige Punkte
+            ax = RNG.randint(0, max(0, w - 1))
+            ay = RNG.randint(0, max(0, h - 1))
+            bx = RNG.randint(0, max(0, w - 1))
+            by = RNG.randint(0, max(0, h - 1))
+            x0, y0, x1, y1 = _sorted_coords(ax, ay, bx, by)
+
+            if RNG.random() < 0.5:
+                # Ellipse
+                draw.ellipse([x0, y0, x1, y1], fill=255)
+            else:
+                # Polygon mit 3–6 Punkten, sauber in Bounds
+                n = RNG.randint(3, 6)
+                pts = []
+                for _i in range(n):
+                    px = RNG.randint(x0, x1)
+                    py = RNG.randint(y0, y1)
+                    pts.append((px, py))
+                draw.polygon(pts, fill=255)
+        except Exception:
+            # Fallback: Sicheres Rechteck in Bildmitte
+            cx, cy = w // 2, h // 2
+            x0 = max(0, cx - min_side)
+            y0 = max(0, cy - min_side)
+            x1 = min(w - 1, cx + min_side)
+            y1 = min(h - 1, cy + min_side)
+            draw.rectangle([x0, y0, x1, y1], fill=255)
 
     return mask
 
@@ -201,180 +169,403 @@ def _get_pipe(name: str):
 
     if name == "sd15_img2img":
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-            "runwayml/stable-diffusion-v1-5", torch_dtype=DTYPE
-        ).to(DEVICE)
+            "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
+        ).to("cuda")
 
     elif name == "sd15_inpaint":
         pipe = StableDiffusionInpaintPipeline.from_pretrained(
-            "runwayml/stable-diffusion-inpainting", torch_dtype=DTYPE
-        ).to(DEVICE)
+            "runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16
+        ).to("cuda")
 
     elif name == "sdxl_inpaint":
         pipe = StableDiffusionXLInpaintPipeline.from_pretrained(
-            "diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=DTYPE
-        ).to(DEVICE)
+            "diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=torch.float16
+        ).to("cuda")
 
     elif name == "instruct_pix2pix":
         pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
-            "timbrooks/instruct-pix2pix", torch_dtype=DTYPE
-        ).to(DEVICE)
+            "timbrooks/instruct-pix2pix", torch_dtype=torch.float16
+        ).to("cuda")
     else:
         raise ValueError(f"Unknown pipe '{name}'")
 
     _PIPE_CACHE[name] = pipe
     return pipe
 
+def _free_pipe(name: str):
+    if name in _PIPE_CACHE:
+        try:
+            del _PIPE_CACHE[name]
+        except Exception:
+            pass
+
+    torch.cuda.empty_cache()
+
 # ------------------------------------------------------------
 # Core Manipulations
 # ------------------------------------------------------------
-def manipulate_known(known_or_unknown: str = "known"):
-    rng = random.Random(CONFIG["rng_seed"])
+def _selected_known_for_category(category):
+    if category == "human":
+        return FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS + FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA
+    elif category == "building":
+        return FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE
+    else:  # "landscape"
+        return FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ
+
+def _selected_unknown_for_category():
+    if category == "human":
+        return FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ
+    elif category == "building":
+        return FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET
+    else:
+        return FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE
+
+def manipulate_known():
+    known_or_unknown = "known"
 
     for category in CATEGORIES:
-        # Eingangsordner realer Bilder
-        in_dir = os.path.join(PROJECT_ROOT, CONFIG["images_path"], known_or_unknown, category, "real")
-        files = _read_images_from(in_dir)
-        if not files:
-            print(f"[{known_or_unknown}/{category}] keine realen Bilder gefunden.")
+        selected = _selected_known_for_category(category)
+        if not selected:
+            print(f"[known/{category}] keine Bilder ausgewählt.")
             continue
 
-        selected = _choose_half(files, rng)
-        print(f"[{known_or_unknown}/{category}] {len(selected)} von {len(files)} Bildern werden manipuliert.")
+        print(f"[known/{category}] Starte Manipulation für {len(selected)} Bilder.")
 
-        # Pipelines für known: drei Modelle
-        pipes = {
-            "sd15_img2img": _get_pipe("sd15_img2img"),
-            "sd15_inpaint": _get_pipe("sd15_inpaint"),
-            "sdxl_inpaint": _get_pipe("sdxl_inpaint"),
-        }
-
-        for idx, path in enumerate(selected):
-            img = _ensure_rgb(Image.open(path))
-            # Abwechselndes Routing über die drei Modelle
-            order = ["sd15_img2img", "sd15_inpaint", "sdxl_inpaint"]
-            model_name = order[idx % len(order)]
-
-            if model_name == "sd15_img2img":
-                prompt = _pick_edit(category, "img2img", rng)
+        # Modell 1: sd15_img2img
+        model_name = "sd15_img2img"
+        pipe = _get_pipe(model_name)
+        for path in selected:
+            with Image.open(path) as im:
+                img = _ensure_rgb(im)
+                prompt = BALANCER.next("known", category, "img2img")
                 gen, seed = _torch_generator()
-                img_resized = _resize_for_model(img, is_sdxl=False)
-                out = pipes[model_name](
+                out = pipe(
                     prompt=prompt,
-                    image=img_resized,
-                    strength=0.35,            # moderate Änderung
-                    guidance_scale=CONFIG["guidance"],
-                    num_inference_steps=CONFIG["steps"],
+                    image=img,
+                    strength=0.35,
+                    guidance_scale=GUIDANCE_SCALE,
+                    num_inference_steps=STEPS,
                     generator=gen
                 ).images[0]
-
                 out_path = _output_path(path, known_or_unknown, category, model_name, seed)
                 out.save(out_path, quality=95)
-                _save_and_log(
-                    os.path.join(PROJECT_ROOT, CONFIG["manipulated_images_log_path"]),
-                    [known_or_unknown, category, path, model_name, "img2img", prompt, seed, out_path]
-                )
+                _save_and_log([known_or_unknown, category, path, model_name, "img2img", prompt, seed, out_path])
+        _free_pipe(model_name)
 
-            elif model_name == "sd15_inpaint":
-                prompt = _pick_edit(category, "inpaint_add", rng)
+        # Modell 2: sd15_inpaint
+        model_name = "sd15_inpaint"
+        pipe = _get_pipe(model_name)
+        for path in selected:
+            with Image.open(path) as im:
+                img = _ensure_rgb(im)
+                prompt = BALANCER.next("known", category, "inpaint_add")
                 gen, seed = _torch_generator()
-                img_resized = _resize_for_model(img, is_sdxl=False)
-                mask = _random_mask(img_resized.size, rng)
-
-                out = pipes[model_name](
+                mask = _random_mask(img.size)
+                out = pipe(
                     prompt=prompt,
-                    image=img_resized,
+                    image=img,
                     mask_image=mask,
-                    guidance_scale=CONFIG["guidance"],
-                    num_inference_steps=CONFIG["steps"],
+                    guidance_scale=GUIDANCE_SCALE,
+                    num_inference_steps=STEPS,
                     generator=gen
                 ).images[0]
-
                 out_path = _output_path(path, known_or_unknown, category, model_name, seed)
                 out.save(out_path, quality=95)
-                _save_and_log(
-                    os.path.join(PROJECT_ROOT, CONFIG["manipulated_images_log_path"]),
-                    [known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path]
-                )
+                _save_and_log([known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
+        _free_pipe(model_name)
 
-            elif model_name == "sdxl_inpaint":
-                prompt = _pick_edit(category, "inpaint_add", rng)
+        # Modell 3: sdxl_inpaint
+        model_name = "sdxl_inpaint"
+        pipe = _get_pipe(model_name)
+        for path in selected:
+            with Image.open(path) as im:
+                img = _ensure_rgb(im)
+                prompt = BALANCER.next("known", category, "inpaint_add")
                 gen, seed = _torch_generator()
-                img_resized = _resize_for_model(img, is_sdxl=True)
-                mask = _random_mask(img_resized.size, rng)
-
-                out = pipes[model_name](
+                mask = _random_mask(img.size)
+                out = pipe(
                     prompt=prompt,
-                    image=img_resized,
+                    image=img,
                     mask_image=mask,
-                    guidance_scale=CONFIG["guidance"],
-                    num_inference_steps=CONFIG["steps"],
+                    guidance_scale=GUIDANCE_SCALE,
+                    num_inference_steps=STEPS,
                     generator=gen
                 ).images[0]
-
                 out_path = _output_path(path, known_or_unknown, category, model_name, seed)
                 out.save(out_path, quality=95)
-                _save_and_log(
-                    os.path.join(PROJECT_ROOT, CONFIG["manipulated_images_log_path"]),
-                    [known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path]
-                )
-
+                _save_and_log([known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
+        _free_pipe(model_name)
 
 def manipulate_unknown_with_instruct_pix2pix():
     known_or_unknown = "unknown"
-    rng = random.Random(CONFIG["rng_seed"] + 999)
-
-    pipe = _get_pipe("instruct_pix2pix")
+    model_name = "instruct_pix2pix"
+    pipe = _get_pipe(model_name)
 
     for category in CATEGORIES:
-        in_dir = os.path.join(PROJECT_ROOT, CONFIG["images_path"], known_or_unknown, category, "real")
-        files = _read_images_from(in_dir)
-        if not files:
-            print(f"[{known_or_unknown}/{category}] keine realen Bilder gefunden.")
+        selected = _selected_unknown_for_category(category)
+        if not selected:
+            print(f"[unknown/{category}] keine Bilder ausgewählt.")
             continue
 
-        selected = _choose_half(files, rng)
-        print(f"[{known_or_unknown}/{category}] {len(selected)} von {len(files)} Bildern werden manipuliert (InstructPix2Pix).")
-
+        print(f"[unknown/{category}] {len(selected)} Bilder werden manipuliert ({model_name}).")
         for path in selected:
-            img = _ensure_rgb(Image.open(path))
-            instruction = _pick_edit(category, "instruction", rng)
-            gen, seed = _torch_generator()
+            with Image.open(path) as im:
+                img = _ensure_rgb(im)
+                instruction = BALANCER.next("unknown", category, "instruction")
+                gen, seed = _torch_generator()
+                out = pipe(
+                    image=img,
+                    prompt=instruction,
+                    num_inference_steps=STEPS,
+                    guidance_scale=GUIDANCE_SCALE,
+                    image_guidance_scale=1.6,
+                    generator=gen
+                ).images[0]
+                out_path = _output_path(path, known_or_unknown, category, model_name, seed)
+                out.save(out_path, quality=95)
+                _save_and_log([known_or_unknown, category, path, model_name, "instruction", instruction, seed, out_path])
 
-            # Bild für SD15-Größe normalisieren (das Modell ist SD15-basiert)
-            img_resized = _resize_for_model(img, is_sdxl=False)
+    _free_pipe(model_name)
 
-            out = pipe(
-                image=img_resized,
-                prompt=instruction,
-                num_inference_steps=CONFIG["steps"],
-                guidance_scale=CONFIG["guidance"],
-                image_guidance_scale=1.6,  # hält mehr von der Originalstruktur
-                generator=gen
-            ).images[0]
 
-            out_path = _output_path(path, known_or_unknown, category, "instruct_pix2pix", seed)
-            out.save(out_path, quality=95)
-            _save_and_log(
-                os.path.join(PROJECT_ROOT, CONFIG["manipulated_images_log_path"]),
-                [known_or_unknown, category, path, "instruct_pix2pix", "instruction", instruction, seed, out_path]
-            )
+
+
+# ------------------------------------------------------------
+# Test
+# ------------------------------------------------------------
+
+def _pick_any_sample_for(category: str, known_or_unknown: str) -> str | None:
+    """Nimmt ein Beispielbild für die Kategorie + Split aus den bereits vorgewählten Listen."""
+    if known_or_unknown == "known":
+        if category == "human":
+            pool = FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS + FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA
+        elif category == "building":
+            pool = FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE
+        elif category == "landscape":
+            pool = FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ
+        else:
+            pool = []
+    else:
+        if category == "human":
+            pool = FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ
+        elif category == "building":
+            pool = FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET
+        elif category == "landscape":
+            pool = FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE
+        else:
+            pool = []
+    return pool[0] if pool else None
+
+def smoke_test():
+    """
+    Führt je Modell einen einzelnen Lauf aus:
+      - known/sd15_img2img  (img2img)
+      - known/sd15_inpaint  (inpaint_add, random mask)
+      - known/sdxl_inpaint  (inpaint_add, random mask)
+      - unknown/instruct_pix2pix (instruction)
+    Nimmt jeweils das erste verfügbare Beispielbild aus deinen vorgewählten Listen.
+    Loggt normal in die CSV (mit „_SMOKE“ im Output-Filename).
+    """
+    print("\n=== SMOKE TEST START ===")
+    results = []
+
+    # --- 1) SD15 Img2Img (known) ---
+    cat_order = ["human", "building", "landscape"]  # Priorität für Beispielbild
+    path = None
+    cat_used = None
+    for cat in cat_order:
+        p = _pick_any_sample_for(cat, "known")
+        if p:
+            path, cat_used = p, cat
+            break
+    if path:
+        model_name = "sd15_img2img"
+        pipe = _get_pipe(model_name)
+        prompt = BALANCER.next("known", cat_used, "img2img")
+        gen, seed = _torch_generator()
+        img = _ensure_rgb(Image.open(path))
+        # optional: Resize aktivieren
+        # img = _resize_for_model(img, is_sdxl=False)
+        t0 = time.perf_counter()
+        out = pipe(prompt=prompt, image=img, strength=0.35,
+                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
+                   generator=gen).images[0]
+        dt = time.perf_counter() - t0
+        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
+        out.save(out_path, quality=95)
+        _save_and_log(["known", cat_used, path, model_name, "img2img", prompt, seed, out_path])
+        _free_pipe(model_name)
+        results.append((model_name, cat_used, dt, out_path))
+        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
+    else:
+        print("[SMOKE] Kein known-Beispielbild gefunden (sd15_img2img übersprungen).")
+
+    # --- 2) SD15 Inpaint (known) ---
+    path = None; cat_used = None
+    for cat in cat_order:
+        p = _pick_any_sample_for(cat, "known")
+        if p:
+            path, cat_used = p, cat
+            break
+    if path:
+        model_name = "sd15_inpaint"
+        pipe = _get_pipe(model_name)
+        prompt = BALANCER.next("known", cat_used, "inpaint_add")
+        gen, seed = _torch_generator()
+        img = _ensure_rgb(Image.open(path))
+        # img = _resize_for_model(img, is_sdxl=False)
+        mask = _random_mask(img.size)
+        t0 = time.perf_counter()
+        out = pipe(prompt=prompt, image=img, mask_image=mask,
+                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
+                   generator=gen).images[0]
+        dt = time.perf_counter() - t0
+        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
+        out.save(out_path, quality=95)
+        _save_and_log(["known", cat_used, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
+        _free_pipe(model_name)
+        results.append((model_name, cat_used, dt, out_path))
+        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
+    else:
+        print("[SMOKE] Kein known-Beispielbild gefunden (sd15_inpaint übersprungen).")
+
+    # --- 3) SDXL Inpaint (known) ---
+    path = None; cat_used = None
+    for cat in cat_order:
+        p = _pick_any_sample_for(cat, "known")
+        if p:
+            path, cat_used = p, cat
+            break
+    if path:
+        model_name = "sdxl_inpaint"
+        pipe = _get_pipe(model_name)
+        prompt = BALANCER.next("known", cat_used, "inpaint_add")
+        gen, seed = _torch_generator()
+        img = _ensure_rgb(Image.open(path))
+        # img = _resize_for_model(img, is_sdxl=True)
+        mask = _random_mask(img.size)
+        t0 = time.perf_counter()
+        out = pipe(prompt=prompt, image=img, mask_image=mask,
+                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
+                   generator=gen).images[0]
+        dt = time.perf_counter() - t0
+        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
+        out.save(out_path, quality=95)
+        _save_and_log(["known", cat_used, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
+        _free_pipe(model_name)
+        results.append((model_name, cat_used, dt, out_path))
+        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
+    else:
+        print("[SMOKE] Kein known-Beispielbild gefunden (sdxl_inpaint übersprungen).")
+
+    # --- 4) InstructPix2Pix (unknown) ---
+    path = None; cat_used = None
+    for cat in cat_order:
+        p = _pick_any_sample_for(cat, "unknown")
+        if p:
+            path, cat_used = p, cat
+            break
+    if path:
+        model_name = "instruct_pix2pix"
+        pipe = _get_pipe(model_name)
+        instruction = BALANCER.next("unknown", cat_used, "instruction")
+        gen, seed = _torch_generator()
+        img = _ensure_rgb(Image.open(path))
+        # img = _resize_for_model(img, is_sdxl=False)
+        t0 = time.perf_counter()
+        out = pipe(image=img, prompt=instruction,
+                   num_inference_steps=STEPS, guidance_scale=GUIDANCE_SCALE,
+                   image_guidance_scale=1.6, generator=gen).images[0]
+        dt = time.perf_counter() - t0
+        out_path = _output_path(path, "unknown", cat_used, model_name, f"{seed}_SMOKE")
+        out.save(out_path, quality=95)
+        _save_and_log(["unknown", cat_used, path, model_name, "instruction", instruction, seed, out_path])
+        _free_pipe(model_name)
+        results.append((model_name, cat_used, dt, out_path))
+        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
+    else:
+        print("[SMOKE] Kein unknown-Beispielbild gefunden (instruct_pix2pix übersprungen).")
+
+    # --- Summary ---
+    print("\n=== SMOKE SUMMARY ===")
+    if not results:
+        print("Keine Läufe durchgeführt.")
+    else:
+        for m, c, dt, outp in results:
+            print(f"{m:22s} | {c:10s} | {dt:6.2f}s | {outp}")
+    print("=====================\n")
 
 # ------------------------------------------------------------
 # Main
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print("Starting manipulated image generation ...")
-    if HF_TOKEN is None:
+
+    if not HF_TOKEN:
         raise EnvironmentError("HF_TOKEN fehlt in .env")
-    login(token=HF_TOKEN, add_to_git_credential=True)
+    login(token=HF_TOKEN)
 
-    if DEVICE != "cuda":
-        print("WARN: CUDA nicht verfügbar – das wird sehr langsam.")
+    if not torch.cuda.is_available():
+        print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
 
-    # Known: 3 Modelle (sd15 img2img, sd15 inpaint, sdxl inpaint)
-    manipulate_known("known")
+    for category in CATEGORIES:
+        if category == "human":
+            known_faceforensics = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "human", "realistic",
+                                               "faceforensics")
+            known_celeba = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "human", "realistic", "celeba")
+            unknown_ffhq = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "unknown", "human", "realistic", "ffqh")
 
-    # Unknown: 1 Modell (InstructPix2Pix)
-    manipulate_unknown_with_instruct_pix2pix()
+            k_ff_files = _read_images_from(known_faceforensics)
+            k_cb_files = _read_images_from(known_celeba)
+            u_ffhq = _read_images_from(unknown_ffhq)
+
+            FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS = _choose_half(k_ff_files)
+            FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA = _choose_half(k_cb_files)
+            FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ = _choose_half(u_ffhq)
+
+            print(
+                f"[known/human] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)} von {len(k_ff_files)}")
+            print(
+                f"[known/human] CelebA:        {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)} von {len(k_cb_files)}")
+            print(f"[unknown/human] FFHQ:         {len(FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ)} von {len(u_ffhq)}")
+
+        elif category == "building":
+            known_arch = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "building", "realistic",
+                                      "architecture")
+            unknown_imn = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "unknown", "building", "realistic",
+                                       "imagenet")
+
+            k_files = _read_images_from(known_arch)
+            u_files = _read_images_from(unknown_imn)
+
+            FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE = _choose_half(k_files)
+            FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET = _choose_half(u_files)
+
+            print(
+                f"[known/building] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)} von {len(k_files)}")
+            print(
+                f"[unknown/building] imagenet:   {len(FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET)} von {len(u_files)}")
+
+        elif category == "landscape":
+            known_lhq = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "landscape", "realistic", "lhq")
+            unknown_ls = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "unknown", "landscape", "realistic",
+                                      "landscape")
+
+            k_files = _read_images_from(known_lhq)
+            u_files = _read_images_from(unknown_ls)
+
+            FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ = _choose_half(k_files)
+            FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE = _choose_half(u_files)
+
+            print(
+                f"[known/landscape] LHQ:         {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)} von {len(k_files)}")
+            print(
+                f"[unknown/landscape] LANDSCAPE: {len(FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE)} von {len(u_files)}")
+
+    smoke_test()
+
+    # manipulate_known()
+    # manipulate_unknown_with_instruct_pix2pix()
 
     print("DONE.")
+
