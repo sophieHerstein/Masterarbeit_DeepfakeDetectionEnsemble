@@ -1,46 +1,17 @@
-# TODO: an Masterarbeit anpassen
-
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
-from model_loader import CONFIG, get_model, MODEL_NAMES
+from utils.model_loader import get_model
+from utils.config import CONFIG, TRAININGS_VARIANTEN, MODELS
 import os
 import time
 import csv
 import itertools
-import logging
 
-
-def setup_logger(model_name, log_dir, variante):
-    os.makedirs(log_dir, exist_ok=True)
-    logger = logging.getLogger(model_name)
-    logger.setLevel(logging.DEBUG)
-
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    out = os.path.join(log_dir, 'train', variante, f"{model_name}.log")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    fh = logging.FileHandler(out)
-    fh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
-
-
-def train_model(config, variante, grid_search=False):
-    logger = setup_logger(config["model_name"], config.get("log_dir", "logs"), variante)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Starte Training auf Gerät: {device}")
+def train_model(config, model_name, variante, grid_search=False):
+    device = torch.device("cuda")
+    print(f"Starte Training auf Gerät: {device}")
 
     transform = transforms.Compose([
         transforms.Resize((config["image_size"], config["image_size"])),
@@ -48,16 +19,16 @@ def train_model(config, variante, grid_search=False):
         transforms.Normalize([0.5] * 3, [0.5] * 3)
     ])
 
-    train_dataset = datasets.ImageFolder(config["train_dir"], transform=transform)
-    val_dataset = datasets.ImageFolder(config["val_dir"], transform=transform)
+    train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=transform)
+    val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=transform)
 
-    logger.info(f"Train class_to_idx: {train_dataset.class_to_idx}")
-    logger.info(f"Val class_to_idx: {val_dataset.class_to_idx}")
+    print(f"Train class_to_idx: {train_dataset.class_to_idx}")
+    print(f"Val class_to_idx: {val_dataset.class_to_idx}")
 
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
 
-    model = get_model(config["model_name"], config["num_classes"], config["use_pretrained"])
+    model = get_model(model_name)
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -68,10 +39,10 @@ def train_model(config, variante, grid_search=False):
     start_time = time.time()
 
     if grid_search:
-        epoch_log_path = os.path.join(config["log_dir"], 'train', variante, "gridsearch.csv")
+        epoch_log_path = os.path.join(config["train_log_path"], variante, "gridsearch.csv")
         os.makedirs(os.path.dirname(epoch_log_path), exist_ok=True)
     else:
-        epoch_log_path = os.path.join(config["log_dir"], 'train', variante, f"{config['model_name']}.csv")
+        epoch_log_path = os.path.join(config["train_log_path"], variante, f"{model_name}.csv")
         os.makedirs(os.path.dirname(epoch_log_path), exist_ok=True)
 
     with open(epoch_log_path, "w", newline="") as f:
@@ -116,34 +87,32 @@ def train_model(config, variante, grid_search=False):
             writer.writerow([epoch + 1, f"{train_acc:.2f}", f"{val_acc:.2f}", f"{running_loss:.4f}", f"{epoch_time:.2f}"])
 
         eta = (time.time() - start_time) / (epoch + 1) * (config["epochs"] - epoch - 1)
-        logger.info(f"Epoche {epoch + 1}/{config['epochs']} - Loss: {running_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%, ETA: {eta:.0f}s")
+        print(f"Epoche {epoch + 1}/{config['epochs']} - Loss: {running_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%, ETA: {eta:.0f}s")
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             no_improve_epochs = 0
+            os.makedirs(os.path.join(config["checkpoint_dir"], variante), exist_ok=True)
+            checkpoint_path = os.path.join(config["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f"Modell gespeichert unter: {checkpoint_path}")
         else:
             no_improve_epochs += 1
             if no_improve_epochs >= config["early_stopping_patience"]:
-                logger.warning(f"Early stopping ausgelöst nach {epoch + 1} Epochen.")
+                print(f"Early stopping ausgelöst nach {epoch + 1} Epochen.")
                 break
 
-    os.makedirs(config["checkpoint_dir"], exist_ok=True)
-    checkpoint_path = os.path.join(config["checkpoint_dir"], f"{config['model_name']}_{variante}_finetuned.pth")
-    torch.save(model.state_dict(), checkpoint_path)
-    logger.info(f"Modell gespeichert unter: {checkpoint_path}")
-
     if not grid_search:
-        log_dir = os.path.dirname(config["train_result"])
+        log_dir = os.path.dirname(config[f"train_{variante}_result_log"])
         if log_dir:
             os.makedirs(log_dir, exist_ok=True)
-        log_exists = os.path.isfile(config["train_result"])
-        with open(config["train_result"], "a", newline="") as logfile:
+        log_exists = os.path.isfile(config[f"train_{variante}_result_log"])
+        with open(config[f"train_{variante}_result_log"], "a", newline="") as logfile:
             writer = csv.writer(logfile)
             if not log_exists:
-                writer.writerow(["Modell", "Variante", "Train-Acc", "Val-Acc", "Loss", "Trainzeit (s)", "last epoch"])
+                writer.writerow(["Modell", "Train-Acc", "Val-Acc", "Loss", "Trainzeit (s)", "last epoch"])
             writer.writerow([
-                config["model_name"],
-                variante,
+                model_name,
                 f"{train_acc:.2f}",
                 f"{val_acc:.2f}",
                 f"{running_loss:.4f}",
@@ -153,55 +122,40 @@ def train_model(config, variante, grid_search=False):
 
     return val_acc
 
-def parameter_grid_search(config, param_grid, variante, test_model="mobilenet_v2",):
-    logger = setup_logger("grid_search", config.get("log_dir", "logs"), variante)
-    logger.info("Starte Parameter-Test mit Grid Search")
+def parameter_grid_search(config, grid, variante, test_model):
+    print("Starte Parameter-Test mit Grid Search")
     best_acc = 0.0
     best_config = {}
 
-    for lr, bs in itertools.product(param_grid["learning_rate"], param_grid["batch_size"]):
-        config["model_name"] = test_model
+    for lr, bs in itertools.product(grid["learning_rate"], grid["batch_size"]):
         config["learning_rate"] = lr
         config["batch_size"] = bs
-        config["epochs"] = 3
 
-        logger.info(f"Test: LR={lr}, Batch={bs}")
-        acc = train_model(config, variante, True)
-        logger.info(f"Ergebnis: Val Acc = {acc:.2f}%")
+        print(f"Test: LR={lr}, Batch={bs}")
+        acc = train_model(config, test_model, variante, True)
+        print(f"Ergebnis: Val Acc = {acc:.2f}%")
 
         if acc > best_acc:
             best_acc = acc
             best_config = {"learning_rate": lr, "batch_size": bs}
 
-    logger.info(f"Beste Parameterkombination: LR={best_config['learning_rate']} | Batch={best_config['batch_size']} | Acc={best_acc:.2f}%")
+    print(f"Beste Parameterkombination: LR={best_config['learning_rate']} | Batch={best_config['batch_size']} | Acc={best_acc:.2f}%")
     return best_config
 
-# Parameter definieren
-param_grid = {
-    "learning_rate": [1e-4, 5e-5],
-    "batch_size": [16, 32]
-}
 
-optimal_params = parameter_grid_search(CONFIG, param_grid, "celebdf_only")
-CONFIG["learning_rate"] = optimal_params["learning_rate"]
-CONFIG["batch_size"] = optimal_params["batch_size"]
-CONFIG["epochs"] = 20
-
-for model_name in MODEL_NAMES:
-    print(f"\n Starte Training für Modell: {model_name}")
-    CONFIG["model_name"] = model_name
-    train_model(CONFIG, "celebdf_only")
-
-
-CONFIG["train_dir"] = "data/celebdf_ff/train"
-CONFIG["val_dir"] = "data/celebdf_ff/test"
-
-optimal_params = parameter_grid_search(CONFIG, param_grid, "celebdf_ff")
-CONFIG["learning_rate"] = optimal_params["learning_rate"]
-CONFIG["batch_size"] = optimal_params["batch_size"]
-CONFIG["epochs"] = 20
-
-for model_name in MODEL_NAMES:
-    print(f"\n Starte Training für Modell: {model_name}")
-    CONFIG["model_name"] = model_name
-    train_model(CONFIG, "celebdf_ff")
+if __name__ == '__main__':
+    # Parameter definieren
+    param_grid = {
+        "learning_rate": [1e-4, 5e-5],
+        "batch_size": [16, 32]
+    }
+    for variante in TRAININGS_VARIANTEN:
+        for m in MODELS:
+            CONFIG["epochs"] = 3
+            optimal_params = parameter_grid_search(CONFIG, param_grid, variante, m)
+            CONFIG["learning_rate"] = optimal_params["learning_rate"]
+            CONFIG["batch_size"] = optimal_params["batch_size"]
+            CONFIG["epochs"] = 40
+            print(f"\n Starte Training für Modell: {m}")
+            train_model(CONFIG, m, variante)
+            print(f"Training für Modell {m} abgeschlossen.\n")

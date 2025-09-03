@@ -1,10 +1,14 @@
 # Array mit Kategorien
 CATEGORIES = ["human", "building", "landscape"]
 
+#Methoden für das Vorverarbeiten der Bilder TODO: Vorverarbeitung trifft es nicht ganz - anderen Begriff finden
+PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
+
 # Anzahl der Varianten je Prompt
 VARIANTEN_BEKANNT = 14
 VARIANTEN_UNBEKANNT = 6
 
+# CNN Modelle
 MODELS = [
     "xception71",
 	"mobilenetv2_100",
@@ -14,11 +18,41 @@ MODELS = [
 	"convnext_small"
 ]
 
-# enthält Pfade usw.
+# Trainingsvarianten
+TRAININGS_VARIANTEN = [
+    *CATEGORIES,
+    *PREPROCESS_METHODS
+]
+
+# enthält Pfade und andere Parameter usw.
 CONFIG = {
     "synthetic_images_log_path": "logs/image_synthesis/image_synthesis_log.csv",
+    "train_log_path": "logs/train",
+    "train_human_result_log": "logs/train/human/train_results.csv",
+    "train_building_result_log": "logs/train/building/train_results.csv",
+    "train_landscape_result_log": "logs/train/landscape/train_results.csv",
+    "train_grayscaling_result_log": "logs/train/grayscaling/train_results.csv",
+    "train_edges_result_log": "logs/train/edges/train_results.csv",
+    "train_frequencies_result_log": "logs/train/frequencies/train_results.csv",
+    "checkpoint_dir": "checkpoints",
     "images_path": "images",
-    "preprocessed_images_path": "images/preprocessed",
+    "train_dir": "data/train",
+    "val_dir": "data/val",
+    "known_test_dir": "data/known_test",
+    "unknown_test_dir": "data/unknown_test",
+    "known_test_jpeg_dir": "data/known_test_jpeg",
+    "unknown_test_jpeg_dir": "data/unknown_test_jpeg",
+    "known_test_noisy_dir": "data/known_test_noisy",
+    "unknown_test_noisy_dir": "data/unknown_test_noisy",
+    "known_test_scaled_dir": "data/known_test_scaled",
+    "unknown_test_scaled_dir": "data/unknown_test_scaled",
+
+    "image_size": 224,
+    "epochs": 30,
+    "early_stopping_patience": 4,
+    "batch_size":"",
+    "learning_rate":""
+
 }
 
 # Prompts für synthetische Bilder
@@ -103,5 +137,5 @@ PROMPTS = {
         "panoramic coastline with fishing boats, sunrise",
         "lush jungle waterfall, spray in the air",
         "rolling vineyards in summer, Mediterranean style"
-    ],
+    ]
 }
