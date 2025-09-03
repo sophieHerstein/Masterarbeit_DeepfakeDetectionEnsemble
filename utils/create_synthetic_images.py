@@ -27,9 +27,8 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 _HF_CACHE = {}
 
 # Einheitliche Inferenzparameter
-STEPS = 28
+STEPS = 40
 GUIDANCE_SCALE = 4.5
-SIZE = 512
 # ------------------------------------------------------------------------------
 # Utilities
 # ------------------------------------------------------------------------------
@@ -73,28 +72,25 @@ def make_generator():
 # ------------------------------------------------------------------------------
 # Generatoren
 # ------------------------------------------------------------------------------
-def generate_image_with_stable_diffusion_xl_base_10():
-    print("Generating synthetic images with Stable Diffusion XL Base 1.0")
-    pipe = DiffusionPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
-        torch_dtype=torch.float16, use_safetensors=True, variant="fp16"
-    ).to("cuda")
+def generate_image_with_stable_diffusion_15():
+    print("Generating synthetic images with Stable Diffusion 1.5")
+    model_id = "sd-legacy/stable-diffusion-v1-5"
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+    pipe = pipe.to("cuda")
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
             for _ in range(VARIANTEN_BEKANNT):
                 print(f"Create image for category '{category}' with prompt '{prompt}'")
                 gen, used_seed = make_generator()
-                image_output, name = get_image_output(category, "stable_diffusion_xl_base_10", prompt, used_seed)
+                image_output, name = get_image_output(category, "stable_diffusion_15", prompt, used_seed)
                 image = pipe(
                     prompt,
-                    height=SIZE,
-                    width=SIZE,
                     num_inference_steps=STEPS,
                     guidance_scale=GUIDANCE_SCALE,
                     generator=gen
                 ).images[0]
                 image.save(image_output)
-                write_csv_row(category, prompt, "Stable Diffusion XL Base 1.0", name, used_seed)
+                write_csv_row(category, prompt, "Stable Diffusion 1.5", name, used_seed)
 
     del pipe
     torch.cuda.empty_cache()
@@ -123,8 +119,6 @@ def generate_image_with_juggernaut_xl_v9():
                 image_output, name = get_image_output(category, "juggernaut_xl_v9", prompt, used_seed)
                 image = pipe(
                     prompt=prompt,
-                    height=SIZE,
-                    width=SIZE,
                     num_inference_steps=STEPS,
                     guidance_scale=GUIDANCE_SCALE,
                     generator=gen
@@ -150,8 +144,6 @@ def generate_image_with_dreamlike_photoreal_20():
                 image_output, name = get_image_output(category, "dreamlike_photoreal_20", prompt, used_seed)
                 image = pipe(
                     prompt,
-                    height=SIZE,
-                    width=SIZE,
                     num_inference_steps=STEPS,
                     guidance_scale=GUIDANCE_SCALE,
                     generator=gen
@@ -177,8 +169,6 @@ def generate_image_with_dreamshaper():
                 image_output, name = get_image_output(category, "dreamshaper", prompt, used_seed, True)
                 image = pipe(
                     prompt,
-                    height=SIZE,
-                    width=SIZE,
                     guidance_scale=GUIDANCE_SCALE,
                     num_inference_steps=STEPS,
                     generator=gen
@@ -194,7 +184,7 @@ def generate_image_with_dreamshaper():
 # High-level Wrapper
 # ------------------------------------------------------------------------------
 def create_images():
-    generate_image_with_stable_diffusion_xl_base_10()
+    generate_image_with_stable_diffusion_15()
     generate_image_with_dreamlike_photoreal_20()
     generate_image_with_juggernaut_xl_v9()
 
