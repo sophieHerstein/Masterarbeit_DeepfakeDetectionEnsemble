@@ -11,7 +11,7 @@ import torch
 from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
     DPMSolverMultistepScheduler
 
-from config import PROMPTS, CONFIG, CATEGORIES, VARIANTEN_BEKANNT, VARIANTEN_UNBEKANNT
+from config import PROMPTS, CONFIG, CATEGORIES, SYNTHETIC_VARIANTEN_BEKANNT, SYNTHETIC_VARIANTEN_UNBEKANNT
 
 # ------------------------------------------------------------------------------
 # Pfade & Umgebungsvariablen
@@ -81,7 +81,7 @@ def generate_image_with_stable_diffusion_15():
     pipe = pipe.to("cuda")
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
-            for _ in range(VARIANTEN_BEKANNT):
+            for _ in range(SYNTHETIC_VARIANTEN_BEKANNT):
                 print(f"Create image for category '{category}' with prompt '{prompt}'")
                 gen, used_seed = make_generator()
                 image_output, name = get_image_output(category, "stable_diffusion_15", prompt, used_seed)
@@ -115,7 +115,7 @@ def generate_image_with_juggernaut_xl_v9():
     ).to("cuda")
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
-            for _ in range(VARIANTEN_BEKANNT):
+            for _ in range(SYNTHETIC_VARIANTEN_BEKANNT):
                 print(f"Create image for category '{category}' with prompt '{prompt}'")
                 gen, used_seed = make_generator()
                 image_output, name = get_image_output(category, "juggernaut_xl_v9", prompt, used_seed)
@@ -140,7 +140,7 @@ def generate_image_with_dreamlike_photoreal_20():
     ).to("cuda")
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
-            for _ in range(VARIANTEN_BEKANNT):
+            for _ in range(SYNTHETIC_VARIANTEN_BEKANNT):
                 print(f"Create image for category '{category}' with prompt '{prompt}'")
                 gen, used_seed = make_generator()
                 image_output, name = get_image_output(category, "dreamlike_photoreal_20", prompt, used_seed)
@@ -165,7 +165,7 @@ def generate_image_with_dreamshaper():
     pipe = pipe.to("cuda")
     for category in CATEGORIES:
         for prompt in PROMPTS[category]:
-            for i in range(VARIANTEN_UNBEKANNT):
+            for i in range(SYNTHETIC_VARIANTEN_UNBEKANNT):
                 print(f"Create image for category '{category}' with prompt '{prompt}'")
                 gen, used_seed = make_generator()
                 image_output, name = get_image_output(category, "dreamshaper", prompt, used_seed, True)
