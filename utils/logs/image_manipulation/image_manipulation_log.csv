@@ -1,3 +1,0 @@
-KnownOrUnknown,Kategorie,OriginalPath,Modell,EditType,InstructionOrPrompt,Seed,OutputPath
-known,human,C:\Users\sophi\projects\Masterarbeit\images\known\human\realistic\faceforensics\faceforensics_654.jpg,sd15_img2img,img2img,"portrait in a car, daylight through window",490427,C:\Users\sophi\projects\Masterarbeit\images\known\human\manipulated\sd15_img2img\faceforensics_654_manipulated_490427_SMOKE.jpg
-known,human,C:\Users\sophi\projects\Masterarbeit\images\known\human\realistic\faceforensics\faceforensics_654.jpg,sd15_inpaint,inpaint_random_mask,add stud earrings,776786,C:\Users\sophi\projects\Masterarbeit\images\known\human\manipulated\sd15_inpaint\faceforensics_654_manipulated_776786_SMOKE.jpg

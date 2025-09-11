@@ -143,7 +143,7 @@ PROMPTS = {
 
 EDIT_LIBRARY = {
     "landscape": {
-        "img2img": [
+        "img2img": [ # 25 Prompts
             "sunny summer field",
             "cloudy mountain view",
             "foggy forest",
@@ -170,7 +170,7 @@ EDIT_LIBRARY = {
             "rainy forest path",
             "sunny forest path"
         ],
-        "inpaint_add": [
+        "inpaint": [ # 25 Prompts
             "add small wooden cabin",
             "add tent in field",
             "add red car on dirt path",
@@ -197,7 +197,7 @@ EDIT_LIBRARY = {
             "add fox in forest",
             "add tree stump"
         ],
-        "instruction": [
+        "instruction": [ # 25 Prompts
             "make it snowy winter scene",
             "make it autumn with colorful leaves",
             "make it spring with blossoms",
@@ -226,7 +226,7 @@ EDIT_LIBRARY = {
         ],
     },
     "building": {
-        "img2img": [
+        "img2img": [ # 25 Prompts
             "modern glass facade, daylight",
             "building under cloudy sky",
             "building at night with lit windows",
@@ -253,7 +253,7 @@ EDIT_LIBRARY = {
             "building in winter daylight",
             "industrial building, daytime"
         ],
-        "inpaint_add": [
+        "inpaint": [ # 25 Prompts
             "add ivy on facade",
             "add graffiti on wall",
             "add small balcony",
@@ -280,7 +280,7 @@ EDIT_LIBRARY = {
             "add railing on stairs",
             "add security camera"
         ],
-        "instruction": [
+        "instruction": [ # 25 Prompts
             "make it nighttime with lit windows",
             "make it sunset atmosphere",
             "make it early morning light",
@@ -309,7 +309,7 @@ EDIT_LIBRARY = {
         ],
     },
     "human": {
-        "img2img": [
+        "img2img": [ # 25 Prompts
             "neutral portrait under soft daylight",
             "portrait with strong contrast lighting",
             "indoor portrait with warm artificial light",
@@ -336,7 +336,7 @@ EDIT_LIBRARY = {
             "portrait under cloudy daylight",
             "portrait illuminated by laptop screen"
         ],
-        "inpaint_add": [
+        "inpaint": [ # 25 Prompts
             "add sunglasses",
             "add eyeglasses",
             "add baseball cap",
@@ -363,7 +363,7 @@ EDIT_LIBRARY = {
             "add wireless headphones",
             "add headscarf"
         ],
-        "instruction": [
+        "instruction": [ # 25 Prompts
             "change hair color to blonde",
             "change hair color to brown",
             "change hair color to black",
@@ -388,7 +388,7 @@ EDIT_LIBRARY = {
             "add heavy makeup",
             "remove makeup",
             "add scar on cheek",
-            "remove scar"
+            "add a hat"
         ],
     },
 }

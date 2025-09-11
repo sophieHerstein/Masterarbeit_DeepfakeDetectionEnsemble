@@ -21,6 +21,8 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
 
+RNG = random.Random(42)
+
 # ------------------------------------------------------------------------------
 # Globals (Pipelines werden einmalig geladen und wiederverwendet)
 # ------------------------------------------------------------------------------
@@ -37,9 +39,9 @@ def _slugify(text):
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
     return text[:60] if len(text) > 60 else text
 
-def get_image_output(image_category, model, image_prompt, index, unknown = False):
+def get_image_output(image_category, model, image_prompt, seed, unknown = False):
     p = _slugify(image_prompt)
-    name = f"{image_category}_synthetic_{model}_{p}_{index}.jpg"
+    name = f"{image_category}_synthetic_{model}_{p}_{seed}.jpg"
     image_out = os.path.join(
         PROJECT_ROOT,
         CONFIG["images_path"],
@@ -64,7 +66,7 @@ def write_csv_row(image_category, image_prompt, model, image_path, seed):
         writer.writerow([image_category, image_prompt, model, image_path, seed])
 
 def make_generator():
-    seed = random.randint(1, 100000)
+    seed = RNG.randint(1, 1000000000)
     g = torch.Generator(device="cuda")
     g.manual_seed(seed)
     return g, seed
@@ -202,9 +204,6 @@ if __name__ == "__main__":
     if not torch.cuda.is_available():
         print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
 
-    # Hugging Face Login
-    if not HF_TOKEN:
-        raise EnvironmentError("HF_TOKEN fehlt in .env")
     login(token=HF_TOKEN, add_to_git_credential=True)
 
 

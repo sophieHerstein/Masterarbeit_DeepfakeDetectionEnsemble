@@ -2,6 +2,8 @@ import os
 import random
 import shutil
 
+RNG = random.Random(42)
+
 def copy_random_images(src_folder, dst_folder, n, name_prefix="image"):
     # Alle Dateien im Quellordner auflisten
     files = [f for f in os.listdir(src_folder) if os.path.isfile(os.path.join(src_folder, f))]
@@ -13,7 +15,7 @@ def copy_random_images(src_folder, dst_folder, n, name_prefix="image"):
         raise ValueError(f"Es gibt nur {len(image_files)} Bilder im Ordner, aber {n} wurden angefordert.")
 
     # Zufällige Auswahl treffen
-    selected_files = random.sample(image_files, n)
+    selected_files = RNG.sample(image_files, n)
 
     # Zielordner erstellen, falls er nicht existiert
     os.makedirs(dst_folder, exist_ok=True)
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     architecture_out = "../images/known/building/realistic/architecture"
     imagenet_in = "../data_raw/imagenet/"
     imagenet_out = "../images/unknown/building/realistic/imagenet"
-    copy_random_images(caleba_in, caleba_out, 1100, 'celeba')
+    copy_random_images(caleba_in, caleba_out, 1050, 'celeba')
     copy_random_images(ffhq_in, ffhq_out, 300, 'ffhq')
     copy_random_images(landscape_in, landscape_out, 150, 'landscape')
     copy_random_images(lhq_in, lhq_out, 2100, 'lhq')
