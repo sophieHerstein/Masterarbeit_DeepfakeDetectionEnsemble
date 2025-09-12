@@ -5,20 +5,17 @@ import random
 import sys
 from PIL import Image, ImageDraw
 import torch
-import time
-import argparse
 from dotenv import load_dotenv
 from huggingface_hub import login
 
 from diffusers import (
     StableDiffusionImg2ImgPipeline,
     StableDiffusionInpaintPipeline,
-    StableDiffusionXLInpaintPipeline,
     StableDiffusionInstructPix2PixPipeline,
 )
 
-from utils.config import EDIT_LIBRARY, CATEGORIES, CONFIG
-from utils.prompt_balancer import PromptBalancer
+from utils.config import EDIT_LIBRARY, CATEGORIES, CONFIG, MANIPULATED_VARIANTEN_BEKANNT, \
+    MANIPULATED_HUMAN_VARIANTEN_BEKANNT, MANIPULATED_VARIANTEN_UNBEKANNT
 
 # ------------------------------------------------------------
 # Config / Globals
@@ -29,28 +26,34 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_15_IMG2IMG = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_INPAINTING = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_2_INPAINTING = []
 FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_15_IMG2IMG = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_INPAINTING = []
+FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_2_INPAINTING = []
 FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ = []
+FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_15_IMG2IMG = []
+FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_INPAINTING = []
+FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_2_INPAINTING = []
 FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE = []
+FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_15_IMG2IMG = []
+FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_INPAINTING = []
+FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_2_INPAINTING = []
 
 FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ = []
 FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE = []
 FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET = []
 
+CATEGORIES_FOR_MANIPULATION = [*CATEGORIES, "human_2"]
+
 RNG = random.Random(42)
-
-BALANCER = PromptBalancer(
-    edit_library=EDIT_LIBRARY,
-    rng=RNG,
-    config=CONFIG,
-    project_root=PROJECT_ROOT,
-)
-
 
 STEPS = 40
 GUIDANCE_SCALE = 4.5
 
-_PIPE_CACHE = {}
+# _PIPE_CACHE = {}
 
 # ------------------------------------------------------------
 # Utility
@@ -58,12 +61,7 @@ _PIPE_CACHE = {}
 def _slugify(text):
     text = re.sub(r"\s+", "-", text.strip())
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
-    return text[:80]
-
-def _ensure_rgb(img):
-    if img.mode != "RGB":
-        return img.convert("RGB")
-    return img
+    return text[:60] if len(text) > 60 else text
 
 def _read_images_from(folder):
     if not os.path.isdir(folder):
@@ -79,37 +77,49 @@ def _choose_half(files):
     n = len(files) // 2
     return RNG.sample(files, n) if n > 0 else []
 
-def _save_and_log(row):
-    csv_path = CONFIG["manipulated_images_log_path"]
+def write_csv_row(row):
+    csv_path = os.path.join(PROJECT_ROOT,CONFIG["manipulated_images_log_path"])
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     write_header = not os.path.exists(csv_path)
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         if write_header:
-            w.writerow(["KnownOrUnknown","Kategorie","OriginalPath","Modell","EditType","InstructionOrPrompt","Seed","OutputPath"])
+            w.writerow(["Kategorie","OriginalPath","Modell","EditType","InstructionOrPrompt","Seed","OutputPath"])
         w.writerow(row)
 
-def _output_path(original_path, known_or_unknown, category, model_name, seed):
-    images_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"])
-    base = os.path.splitext(os.path.basename(original_path))[0]
-    out_dir = os.path.join(images_root, known_or_unknown, category, "manipulated", model_name)
-    os.makedirs(out_dir, exist_ok=True)
-    return os.path.join(out_dir, f"{base}_manipulated_{seed}.jpg")
+def get_image_output(known_or_unknown, category, model_name, seed, prompt):
+    p = _slugify(prompt)
+    name = f"{category}_manipulated_{model_name}_{p}_{seed}.jpg"
+    image_out = os.path.join(
+        PROJECT_ROOT,
+        CONFIG["images_path"],
+        known_or_unknown,
+        category,
+        "manipulated",
+        model_name,
+        name
+    )
+    os.makedirs(os.path.dirname(image_out), exist_ok=True)
+    return image_out, name
 
-def _torch_generator():
-    seed = random.randint(1, 1_000_000)
+
+def make_generator():
+    seed = RNG.randint(1, 1000000000)
     g = torch.Generator(device="cuda")
     g.manual_seed(seed)
     return g, seed
+
+def _disable_safety_checker(pipe):
+    # Behalte API-Signatur bei: gibt (images, [False]*N) zurück
+    def dummy_checker(images, clip_input):
+        return images, [False] * len(images)
+    pipe.safety_checker = dummy_checker
+    return pipe
 
 # ------------------------------------------------------------
 # Random Mask (für Inpainting)
 # ------------------------------------------------------------
 def _random_mask(img_size):
-    """
-    Erzeugt eine binäre Maske ("L") gleicher Größe wie das Bild.
-    Robuste Koordinaten, min. Größe je Shape, zufällig 2–4 Patches.
-    """
     w, h = img_size
     mask = Image.new("L", (w, h), 0)
     draw = ImageDraw.Draw(mask)
@@ -160,59 +170,191 @@ def _random_mask(img_size):
 
     return mask
 
-# ------------------------------------------------------------
-# Pipeline Loader
-# ------------------------------------------------------------
-def _get_pipe(name: str):
-    if name in _PIPE_CACHE:
-        return _PIPE_CACHE[name]
+# ------------------------------------------------------------------------------
+# Generatoren
+# ------------------------------------------------------------------------------
+def manipulate_image_with_stable_diffusion_15_img2img():
+    print("Manipulating images with Stable Diffusion 1.5 img2img")
 
-    if name == "sd15_img2img":
-        pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-            "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
-        ).to("cuda")
+    pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
+        "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
+    ).to("cuda")
+    pipe = _disable_safety_checker(pipe)
+    for category in CATEGORIES_FOR_MANIPULATION:
+        selected = _selected_known_for_category_and_manipulation(category, 'sd_img2img')
+        cat = ('human' if category == "human_2" else category)
+        used_selected = {}
+        for prompt in EDIT_LIBRARY[cat]['img2img']:
+            wiederholungen = (MANIPULATED_HUMAN_VARIANTEN_BEKANNT if cat == "human" else MANIPULATED_VARIANTEN_BEKANNT)
+            for i in range(wiederholungen):
+                path = RNG.choice(selected)
+                while used_selected.get(path, 0) > wiederholungen:
+                    path = RNG.choice(selected)
+                used_selected[path] = used_selected.get(path, 0) + 1
+                print(f"[Stable Diffusion 1.5 img2img] Manipulating {path} with {prompt}")
+                with Image.open(path) as img:
+                    img = img.convert("RGB")
+                    gen, seed = make_generator()
+                    out = pipe(
+                        prompt=prompt,
+                        image=img,
+                        strength=0.35,
+                        guidance_scale=GUIDANCE_SCALE,
+                        num_inference_steps=STEPS,
+                        generator=gen
+                    ).images[0]
+                    out_path, image_name = get_image_output("known", category, "stable_diffusion_15_imag2img", seed, prompt)
+                    out.save(out_path)
+                    write_csv_row([category, path, "stable_diffusion_15_imag2img", "img2img", prompt, seed, image_name])
 
-    elif name == "sd15_inpaint":
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(
-            "runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16
-        ).to("cuda")
+    del pipe
+    torch.cuda.empty_cache()
 
-    elif name == "sdxl_inpaint":
-        pipe = StableDiffusionXLInpaintPipeline.from_pretrained(
-            "diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=torch.float16
-        ).to("cuda")
 
-    elif name == "instruct_pix2pix":
-        pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
-            "timbrooks/instruct-pix2pix", torch_dtype=torch.float16
-        ).to("cuda")
-    else:
-        raise ValueError(f"Unknown pipe '{name}'")
+def manipulate_image_with_stable_diffusion_inpainting():
+    print("Manipulating images with Stable Diffusion Inpainting")
+    pipe = StableDiffusionInpaintPipeline.from_pretrained(
+        "runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16
+    ).to("cuda")
+    pipe = _disable_safety_checker(pipe)
+    for category in CATEGORIES_FOR_MANIPULATION:
+        selected = _selected_known_for_category_and_manipulation(category, 'sd_inpaint')
+        cat = ('human' if category == "human_2" else category)
+        used_selected = {}
+        for prompt in EDIT_LIBRARY[cat]['inpaint']:
+            wiederholungen = (MANIPULATED_HUMAN_VARIANTEN_BEKANNT if cat == "human" else MANIPULATED_VARIANTEN_BEKANNT)
+            for i in range(wiederholungen):
+                path = RNG.choice(selected)
+                while used_selected.get(path, 0) > wiederholungen:
+                    path = RNG.choice(selected)
+                used_selected[path] = used_selected.get(path, 0) + 1
+                print(f"[Stable Diffusion Inpainting] Manipulating {path} with {prompt}")
+                with Image.open(path) as img:
+                    img = img.convert("RGB")
+                    gen, seed = make_generator()
+                    mask = _random_mask(img.size)
+                    out = pipe(
+                        prompt=prompt,
+                        image=img,
+                        mask_image=mask,
+                        guidance_scale=GUIDANCE_SCALE,
+                        num_inference_steps=STEPS,
+                        generator=gen
+                    ).images[0]
+                    out_path, image_name = get_image_output("known", category, "stable_diffusion_inpainting", seed, prompt)
+                    out.save(out_path)
+                    write_csv_row([category, path, "stable_diffusion_inpainting", "inpaint", prompt, seed, image_name])
 
-    _PIPE_CACHE[name] = pipe
-    return pipe
 
-def _free_pipe(name: str):
-    if name in _PIPE_CACHE:
-        try:
-            del _PIPE_CACHE[name]
-        except Exception:
-            pass
+    del pipe
+    torch.cuda.empty_cache()
 
+
+def manipulate_image_with_stable_diffusion_2_inpainting():
+    print("Manipulating images with Stable Diffusion 2 Inpainting")
+    pipe = StableDiffusionInpaintPipeline.from_pretrained("stabilityai/stable-diffusion-2-inpainting",
+                                                          torch_dtype=torch.float16).to("cuda")
+    pipe = _disable_safety_checker(pipe)
+    for category in CATEGORIES_FOR_MANIPULATION:
+        selected = _selected_known_for_category_and_manipulation(category, 'sd_2_inpaint')
+        cat = ('human' if category == "human_2" else category)
+        used_selected = {}
+        for prompt in EDIT_LIBRARY[cat]['inpaint']:
+            wiederholungen = (MANIPULATED_HUMAN_VARIANTEN_BEKANNT if cat == "human" else MANIPULATED_VARIANTEN_BEKANNT)
+            for i in range(wiederholungen):
+                path = RNG.choice(selected)
+                while used_selected.get(path, 0) > wiederholungen:
+                    path = RNG.choice(selected)
+                used_selected[path] = used_selected.get(path, 0) + 1
+                print(f"[Stable Diffusion 2 Inpainting] Manipulating {path} with {prompt}")
+                with Image.open(path) as img:
+                    img = img.convert("RGB")
+                    gen, seed = make_generator()
+                    mask = _random_mask(img.size)
+                    out = pipe(
+                        prompt=prompt,
+                        image=img,
+                        mask_image=mask,
+                        guidance_scale=GUIDANCE_SCALE,
+                        num_inference_steps=STEPS,
+                        generator=gen
+                    ).images[0]
+                    out_path, image_name = get_image_output("known", category, "stable_diffusion_2_inpainting", seed, prompt)
+                    out.save(out_path)
+                    write_csv_row([category, path, "stable_diffusion_2_inpainting", "inpaint", prompt, seed, image_name])
+
+    del pipe
+    torch.cuda.empty_cache()
+
+
+def manipulate_image_with_instruct_pix2pix():
+    print("Manipulating images with Instruct Pix2Pix")
+    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
+        "timbrooks/instruct-pix2pix", torch_dtype=torch.float16
+    ).to("cuda")
+    pipe = _disable_safety_checker(pipe)
+    for category in CATEGORIES:
+        selected = _selected_unknown_for_category(category)
+        used_selected = {}
+        for prompt in EDIT_LIBRARY[category]["instruction"]:
+            for i in range(MANIPULATED_VARIANTEN_UNBEKANNT):
+                path = RNG.choice(selected)
+                while used_selected.get(path, 0) > MANIPULATED_VARIANTEN_UNBEKANNT:
+                    path = RNG.choice(selected)
+                used_selected[path] = used_selected.get(path, 0) + 1
+                print(f"[Instruct Pix2Pix] Manipulating {path} with {prompt}")
+                with Image.open(path) as img:
+                    img = img.convert("RGB")
+                    gen, seed = make_generator()
+                    out = pipe(
+                        image=img,
+                        prompt=prompt,
+                        num_inference_steps=STEPS,
+                        guidance_scale=GUIDANCE_SCALE,
+                        image_guidance_scale=1.6,
+                        generator=gen
+                    ).images[0]
+                    out_path, image_name = get_image_output("unknown", category, "instruct_pix2pix", seed, prompt)
+                    out.save(out_path)
+                    write_csv_row([category, path, "instruct_pix2pix", "instruction", prompt, seed, image_name])
+
+    del pipe
     torch.cuda.empty_cache()
 
 # ------------------------------------------------------------
 # Core Manipulations
 # ------------------------------------------------------------
-def _selected_known_for_category(category):
+def _selected_known_for_category_and_manipulation(category, manipulation):
     if category == "human":
-        return FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS + FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA
+        if manipulation == 'sd_img2img':
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_15_IMG2IMG
+        elif manipulation == 'sd_inpaint':
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_INPAINTING
+        else:
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_2_INPAINTING
+    elif category == "human_2":
+        if manipulation == 'sd_img2img':
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_15_IMG2IMG
+        elif manipulation == 'sd_inpaint':
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_INPAINTING
+        else:
+            return FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_2_INPAINTING
     elif category == "building":
-        return FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE
+        if manipulation == 'sd_img2img':
+            return FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_15_IMG2IMG
+        elif manipulation == 'sd_inpaint':
+            return FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_INPAINTING
+        else:
+            return FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_2_INPAINTING
     else:  # "landscape"
-        return FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ
+        if manipulation == 'sd_img2img':
+            return FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_15_IMG2IMG
+        elif manipulation == 'sd_inpaint':
+            return FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_INPAINTING
+        else:
+            return FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_2_INPAINTING
 
-def _selected_unknown_for_category():
+def _selected_unknown_for_category(category):
     if category == "human":
         return FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ
     elif category == "building":
@@ -220,294 +362,9 @@ def _selected_unknown_for_category():
     else:
         return FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE
 
-def manipulate_known():
-    known_or_unknown = "known"
 
-    for category in CATEGORIES:
-        selected = _selected_known_for_category(category)
-        if not selected:
-            print(f"[known/{category}] keine Bilder ausgewählt.")
-            continue
-
-        print(f"[known/{category}] Starte Manipulation für {len(selected)} Bilder.")
-
-        # Modell 1: sd15_img2img
-        model_name = "sd15_img2img"
-        pipe = _get_pipe(model_name)
-        for path in selected:
-            with Image.open(path) as im:
-                img = _ensure_rgb(im)
-                prompt = BALANCER.next("known", category, "img2img")
-                gen, seed = _torch_generator()
-                out = pipe(
-                    prompt=prompt,
-                    image=img,
-                    strength=0.35,
-                    guidance_scale=GUIDANCE_SCALE,
-                    num_inference_steps=STEPS,
-                    generator=gen
-                ).images[0]
-                out_path = _output_path(path, known_or_unknown, category, model_name, seed)
-                out.save(out_path, quality=95)
-                _save_and_log([known_or_unknown, category, path, model_name, "img2img", prompt, seed, out_path])
-        _free_pipe(model_name)
-
-        # Modell 2: sd15_inpaint
-        model_name = "sd15_inpaint"
-        pipe = _get_pipe(model_name)
-        for path in selected:
-            with Image.open(path) as im:
-                img = _ensure_rgb(im)
-                prompt = BALANCER.next("known", category, "inpaint_add")
-                gen, seed = _torch_generator()
-                mask = _random_mask(img.size)
-                out = pipe(
-                    prompt=prompt,
-                    image=img,
-                    mask_image=mask,
-                    guidance_scale=GUIDANCE_SCALE,
-                    num_inference_steps=STEPS,
-                    generator=gen
-                ).images[0]
-                out_path = _output_path(path, known_or_unknown, category, model_name, seed)
-                out.save(out_path, quality=95)
-                _save_and_log([known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
-        _free_pipe(model_name)
-
-        # Modell 3: sdxl_inpaint
-        model_name = "sdxl_inpaint"
-        pipe = _get_pipe(model_name)
-        for path in selected:
-            with Image.open(path) as im:
-                img = _ensure_rgb(im)
-                prompt = BALANCER.next("known", category, "inpaint_add")
-                gen, seed = _torch_generator()
-                mask = _random_mask(img.size)
-                out = pipe(
-                    prompt=prompt,
-                    image=img,
-                    mask_image=mask,
-                    guidance_scale=GUIDANCE_SCALE,
-                    num_inference_steps=STEPS,
-                    generator=gen
-                ).images[0]
-                out_path = _output_path(path, known_or_unknown, category, model_name, seed)
-                out.save(out_path, quality=95)
-                _save_and_log([known_or_unknown, category, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
-        _free_pipe(model_name)
-
-def manipulate_unknown_with_instruct_pix2pix():
-    known_or_unknown = "unknown"
-    model_name = "instruct_pix2pix"
-    pipe = _get_pipe(model_name)
-
-    for category in CATEGORIES:
-        selected = _selected_unknown_for_category(category)
-        if not selected:
-            print(f"[unknown/{category}] keine Bilder ausgewählt.")
-            continue
-
-        print(f"[unknown/{category}] {len(selected)} Bilder werden manipuliert ({model_name}).")
-        for path in selected:
-            with Image.open(path) as im:
-                img = _ensure_rgb(im)
-                instruction = BALANCER.next("unknown", category, "instruction")
-                gen, seed = _torch_generator()
-                out = pipe(
-                    image=img,
-                    prompt=instruction,
-                    num_inference_steps=STEPS,
-                    guidance_scale=GUIDANCE_SCALE,
-                    image_guidance_scale=1.6,
-                    generator=gen
-                ).images[0]
-                out_path = _output_path(path, known_or_unknown, category, model_name, seed)
-                out.save(out_path, quality=95)
-                _save_and_log([known_or_unknown, category, path, model_name, "instruction", instruction, seed, out_path])
-
-    _free_pipe(model_name)
-
-
-
-
-# ------------------------------------------------------------
-# Test
-# ------------------------------------------------------------
-
-def _pick_any_sample_for(category: str, known_or_unknown: str) -> str | None:
-    """Nimmt ein Beispielbild für die Kategorie + Split aus den bereits vorgewählten Listen."""
-    if known_or_unknown == "known":
-        if category == "human":
-            pool = FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS + FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA
-        elif category == "building":
-            pool = FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE
-        elif category == "landscape":
-            pool = FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ
-        else:
-            pool = []
-    else:
-        if category == "human":
-            pool = FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ
-        elif category == "building":
-            pool = FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET
-        elif category == "landscape":
-            pool = FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE
-        else:
-            pool = []
-    return pool[0] if pool else None
-
-def smoke_test():
-    """
-    Führt je Modell einen einzelnen Lauf aus:
-      - known/sd15_img2img  (img2img)
-      - known/sd15_inpaint  (inpaint_add, random mask)
-      - known/sdxl_inpaint  (inpaint_add, random mask)
-      - unknown/instruct_pix2pix (instruction)
-    Nimmt jeweils das erste verfügbare Beispielbild aus deinen vorgewählten Listen.
-    Loggt normal in die CSV (mit „_SMOKE“ im Output-Filename).
-    """
-    print("\n=== SMOKE TEST START ===")
-    results = []
-
-    # --- 1) SD15 Img2Img (known) ---
-    cat_order = ["human", "building", "landscape"]  # Priorität für Beispielbild
-    path = None
-    cat_used = None
-    for cat in cat_order:
-        p = _pick_any_sample_for(cat, "known")
-        if p:
-            path, cat_used = p, cat
-            break
-    if path:
-        model_name = "sd15_img2img"
-        pipe = _get_pipe(model_name)
-        prompt = BALANCER.next("known", cat_used, "img2img")
-        gen, seed = _torch_generator()
-        img = _ensure_rgb(Image.open(path))
-        # optional: Resize aktivieren
-        # img = _resize_for_model(img, is_sdxl=False)
-        t0 = time.perf_counter()
-        out = pipe(prompt=prompt, image=img, strength=0.35,
-                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
-                   generator=gen).images[0]
-        dt = time.perf_counter() - t0
-        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
-        out.save(out_path, quality=95)
-        _save_and_log(["known", cat_used, path, model_name, "img2img", prompt, seed, out_path])
-        _free_pipe(model_name)
-        results.append((model_name, cat_used, dt, out_path))
-        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
-    else:
-        print("[SMOKE] Kein known-Beispielbild gefunden (sd15_img2img übersprungen).")
-
-    # --- 2) SD15 Inpaint (known) ---
-    path = None; cat_used = None
-    for cat in cat_order:
-        p = _pick_any_sample_for(cat, "known")
-        if p:
-            path, cat_used = p, cat
-            break
-    if path:
-        model_name = "sd15_inpaint"
-        pipe = _get_pipe(model_name)
-        prompt = BALANCER.next("known", cat_used, "inpaint_add")
-        gen, seed = _torch_generator()
-        img = _ensure_rgb(Image.open(path))
-        # img = _resize_for_model(img, is_sdxl=False)
-        mask = _random_mask(img.size)
-        t0 = time.perf_counter()
-        out = pipe(prompt=prompt, image=img, mask_image=mask,
-                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
-                   generator=gen).images[0]
-        dt = time.perf_counter() - t0
-        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
-        out.save(out_path, quality=95)
-        _save_and_log(["known", cat_used, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
-        _free_pipe(model_name)
-        results.append((model_name, cat_used, dt, out_path))
-        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
-    else:
-        print("[SMOKE] Kein known-Beispielbild gefunden (sd15_inpaint übersprungen).")
-
-    # --- 3) SDXL Inpaint (known) ---
-    path = None; cat_used = None
-    for cat in cat_order:
-        p = _pick_any_sample_for(cat, "known")
-        if p:
-            path, cat_used = p, cat
-            break
-    if path:
-        model_name = "sdxl_inpaint"
-        pipe = _get_pipe(model_name)
-        prompt = BALANCER.next("known", cat_used, "inpaint_add")
-        gen, seed = _torch_generator()
-        img = _ensure_rgb(Image.open(path))
-        # img = _resize_for_model(img, is_sdxl=True)
-        mask = _random_mask(img.size)
-        t0 = time.perf_counter()
-        out = pipe(prompt=prompt, image=img, mask_image=mask,
-                   guidance_scale=GUIDANCE_SCALE, num_inference_steps=STEPS,
-                   generator=gen).images[0]
-        dt = time.perf_counter() - t0
-        out_path = _output_path(path, "known", cat_used, model_name, f"{seed}_SMOKE")
-        out.save(out_path, quality=95)
-        _save_and_log(["known", cat_used, path, model_name, "inpaint_random_mask", prompt, seed, out_path])
-        _free_pipe(model_name)
-        results.append((model_name, cat_used, dt, out_path))
-        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
-    else:
-        print("[SMOKE] Kein known-Beispielbild gefunden (sdxl_inpaint übersprungen).")
-
-    # --- 4) InstructPix2Pix (unknown) ---
-    path = None; cat_used = None
-    for cat in cat_order:
-        p = _pick_any_sample_for(cat, "unknown")
-        if p:
-            path, cat_used = p, cat
-            break
-    if path:
-        model_name = "instruct_pix2pix"
-        pipe = _get_pipe(model_name)
-        instruction = BALANCER.next("unknown", cat_used, "instruction")
-        gen, seed = _torch_generator()
-        img = _ensure_rgb(Image.open(path))
-        # img = _resize_for_model(img, is_sdxl=False)
-        t0 = time.perf_counter()
-        out = pipe(image=img, prompt=instruction,
-                   num_inference_steps=STEPS, guidance_scale=GUIDANCE_SCALE,
-                   image_guidance_scale=1.6, generator=gen).images[0]
-        dt = time.perf_counter() - t0
-        out_path = _output_path(path, "unknown", cat_used, model_name, f"{seed}_SMOKE")
-        out.save(out_path, quality=95)
-        _save_and_log(["unknown", cat_used, path, model_name, "instruction", instruction, seed, out_path])
-        _free_pipe(model_name)
-        results.append((model_name, cat_used, dt, out_path))
-        print(f"[SMOKE] {model_name} ({cat_used}) OK in {dt:.2f}s → {out_path}")
-    else:
-        print("[SMOKE] Kein unknown-Beispielbild gefunden (instruct_pix2pix übersprungen).")
-
-    # --- Summary ---
-    print("\n=== SMOKE SUMMARY ===")
-    if not results:
-        print("Keine Läufe durchgeführt.")
-    else:
-        for m, c, dt, outp in results:
-            print(f"{m:22s} | {c:10s} | {dt:6.2f}s | {outp}")
-    print("=====================\n")
-
-# ------------------------------------------------------------
-# Main
-# ------------------------------------------------------------
-if __name__ == "__main__":
-    print("Starting manipulated image generation ...")
-
-    if not HF_TOKEN:
-        raise EnvironmentError("HF_TOKEN fehlt in .env")
-    login(token=HF_TOKEN)
-
-    if not torch.cuda.is_available():
-        print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
-
+def get_images_for_manipulation():
+    global FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS, FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA, FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ, FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE, FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET, FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ, FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE
     for category in CATEGORIES:
         if category == "human":
             known_faceforensics = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "human", "realistic",
@@ -520,14 +377,37 @@ if __name__ == "__main__":
             u_ffhq = _read_images_from(unknown_ffhq)
 
             FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS = _choose_half(k_ff_files)
+            for i in range(0, len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)):
+                if i % 3 == 0:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_15_IMG2IMG.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS[i])
+                elif i % 3 == 1:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_INPAINTING.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS[i])
+                elif i % 3 == 2:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_2_INPAINTING.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS[i])
+
             FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA = _choose_half(k_cb_files)
+            for i in range(0, len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)):
+                if i % 3 == 0:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_15_IMG2IMG.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA[i])
+                elif i % 3 == 1:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_INPAINTING.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA[i])
+                elif i % 3 == 2:
+                    FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_2_INPAINTING.append(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA[i])
+
             FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ = _choose_half(u_ffhq)
 
-            print(
-                f"[known/human] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)} von {len(k_ff_files)}")
-            print(
-                f"[known/human] CelebA:        {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)} von {len(k_cb_files)}")
-            print(f"[unknown/human] FFHQ:         {len(FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ)} von {len(u_ffhq)}")
+            print(f"[known/human] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)} von {len(k_ff_files)}")
+            print(f"[img2img] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_15_IMG2IMG)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)}")
+            print(f"[sd_inpaint] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_INPAINTING)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)}")
+            print(f"[sd2_inpaint] FaceForensics: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS_SD_2_INPAINTING)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_FACEFORENSICS)}")
+            print("")
+            print(f"[known/human] CelebA: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)} von {len(k_cb_files)}")
+            print(f"[img2img] CelebA: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_15_IMG2IMG)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)}")
+            print(f"[sd_inpaint] CelebA: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_INPAINTING)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)}")
+            print(f"[sd2_inpaint] CelebA: {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA_SD_2_INPAINTING)} von {len(FILES_FOR_MANIPULATION_HUMAN_KNOWN_CELEBA)}")
+            print("")
+            print(f"[unknown/human] FFHQ: {len(FILES_FOR_MANIPULATION_HUMAN_UNKNOWN_FFHQ)} von {len(u_ffhq)}")
+            print("")
 
         elif category == "building":
             known_arch = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "building", "realistic",
@@ -539,12 +419,23 @@ if __name__ == "__main__":
             u_files = _read_images_from(unknown_imn)
 
             FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE = _choose_half(k_files)
+            for i in range(0, len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)):
+                if i % 3 == 0:
+                    FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_15_IMG2IMG.append(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE[i])
+                elif i % 3 == 1:
+                    FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_INPAINTING.append(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE[i])
+                elif i % 3 == 2:
+                    FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_2_INPAINTING.append(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE[i])
+
             FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET = _choose_half(u_files)
 
-            print(
-                f"[known/building] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)} von {len(k_files)}")
-            print(
-                f"[unknown/building] imagenet:   {len(FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET)} von {len(u_files)}")
+            print(f"[known/building] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)} von {len(k_files)}")
+            print(f"[img2img] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_15_IMG2IMG)} von {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)}")
+            print(f"[sd_inpaint] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_INPAINTING)} von {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)}")
+            print(f"[sd2_inpaint] architecture: {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE_SD_2_INPAINTING)} von {len(FILES_FOR_MANIPULATION_BUILDING_KNOWN_ARCHITECTURE)}")
+            print("")
+            print(f"[unknown/building] imagenet: {len(FILES_FOR_MANIPULATION_BUILDING_UNKNOWN_IMAGENET)} von {len(u_files)}")
+            print("")
 
         elif category == "landscape":
             known_lhq = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "landscape", "realistic", "lhq")
@@ -555,17 +446,53 @@ if __name__ == "__main__":
             u_files = _read_images_from(unknown_ls)
 
             FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ = _choose_half(k_files)
+            for i in range(0, len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)):
+                if i % 3 == 0:
+                    FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_15_IMG2IMG.append(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ[i])
+                elif i % 3 == 1:
+                    FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_INPAINTING.append(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ[i])
+                elif i % 3 == 2:
+                    FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_2_INPAINTING.append(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ[i])
+
             FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE = _choose_half(u_files)
 
-            print(
-                f"[known/landscape] LHQ:         {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)} von {len(k_files)}")
-            print(
-                f"[unknown/landscape] LANDSCAPE: {len(FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE)} von {len(u_files)}")
+            print(f"[known/landscape] LHQ: {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)} von {len(k_files)}")
+            print(f"[img2img] LHQ: {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_15_IMG2IMG)} von {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)}")
+            print(f"[sd_inpaint] LHQ: {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_INPAINTING)} von {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)}")
+            print(f"[sd2_inpaint] LHQ: {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ_SD_2_INPAINTING)} von {len(FILES_FOR_MANIPULATION_LANDSCAPE_KNOWN_LHQ)}")
+            print("")
+            print(f"[unknown/landscape] LANDSCAPE: {len(FILES_FOR_MANIPULATION_LANDSCAPE_UNKNOWN_LANDSCAPE)} von {len(u_files)}")
 
-    smoke_test()
 
-    # manipulate_known()
-    # manipulate_unknown_with_instruct_pix2pix()
+# ------------------------------------------------------------------------------
+# High-level Wrapper
+# ------------------------------------------------------------------------------
+def manipulate_images():
+    manipulate_image_with_stable_diffusion_15_img2img()
+    manipulate_image_with_stable_diffusion_inpainting()
+    manipulate_image_with_stable_diffusion_2_inpainting()
+
+
+def manipulate_images_unbekannt():
+    manipulate_image_with_instruct_pix2pix()
+
+
+# ------------------------------------------------------------
+# Main
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    print("Starting manipulated image generation ...")
+
+    if not torch.cuda.is_available():
+        print("WARN: CUDA nicht verfügbar – Ausführung auf CPU wird sehr langsam sein.", file=sys.stderr)
+
+    login(token=HF_TOKEN)
+
+    get_images_for_manipulation()
+
+
+    manipulate_images()
+    manipulate_images_unbekannt()
 
     print("DONE.")
 

@@ -1,17 +1,16 @@
 # Array mit Kategorien
 CATEGORIES = ["human", "building", "landscape"]
 
-#Methoden für das Vorverarbeiten der Bilder TODO: Vorverarbeitung trifft es nicht ganz - anderen Begriff finden
+#Methoden für das Vorverarbeiten der Bilder
 PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
 
 # Anzahl der Varianten je Prompt
 SYNTHETIC_VARIANTEN_BEKANNT = 14
 SYNTHETIC_VARIANTEN_UNBEKANNT = 6
 
-MANIPULATED_VARIANTEN_BEKANNT = 2
-MANIPULATED_VARIANTEN_UNBEKANNT = 3
-MANIPULATED_HUMAN_VARIANTEN_BEKANNT = 2
-MANIPULATED_HUMAN_VARIANTEN_UNBEKANNT = 3
+MANIPULATED_VARIANTEN_BEKANNT = 14
+MANIPULATED_VARIANTEN_UNBEKANNT = 6
+MANIPULATED_HUMAN_VARIANTEN_BEKANNT = 7
 
 # CNN Modelle
 MODELS = [
