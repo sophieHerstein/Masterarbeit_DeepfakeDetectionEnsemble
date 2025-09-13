@@ -4,6 +4,7 @@ import csv
 import random
 import sys
 from PIL import Image, ImageDraw
+
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -50,10 +51,8 @@ CATEGORIES_FOR_MANIPULATION = [*CATEGORIES, "human_2"]
 
 RNG = random.Random(42)
 
-STEPS = 40
+STEPS = 30
 GUIDANCE_SCALE = 4.5
-
-# _PIPE_CACHE = {}
 
 # ------------------------------------------------------------
 # Utility
@@ -115,6 +114,15 @@ def _disable_safety_checker(pipe):
         return images, [False] * len(images)
     pipe.safety_checker = dummy_checker
     return pipe
+
+def _resize(img, max_side=768):
+    w, h = img.size
+    scale = min(max_side / max(w, h), 1.0)  # niemals hochskalieren
+    new_w = int((w * scale) // 8 * 8) or 8
+    new_h = int((h * scale) // 8 * 8) or 8
+    if (new_w, new_h) != (w, h):
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+    return img
 
 # ------------------------------------------------------------
 # Random Mask (für Inpainting)
@@ -178,7 +186,11 @@ def manipulate_image_with_stable_diffusion_15_img2img():
 
     pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
         "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
-    ).to("cuda")
+    )
+    pipe.enable_vae_slicing()
+    pipe.enable_vae_tiling()
+    pipe.enable_attention_slicing()
+    pipe.to("cuda")
     pipe = _disable_safety_checker(pipe)
     for category in CATEGORIES_FOR_MANIPULATION:
         selected = _selected_known_for_category_and_manipulation(category, 'sd_img2img')
@@ -194,6 +206,7 @@ def manipulate_image_with_stable_diffusion_15_img2img():
                 print(f"[Stable Diffusion 1.5 img2img] Manipulating {path} with {prompt}")
                 with Image.open(path) as img:
                     img = img.convert("RGB")
+                    img = _resize(img)
                     gen, seed = make_generator()
                     out = pipe(
                         prompt=prompt,
@@ -215,7 +228,11 @@ def manipulate_image_with_stable_diffusion_inpainting():
     print("Manipulating images with Stable Diffusion Inpainting")
     pipe = StableDiffusionInpaintPipeline.from_pretrained(
         "runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16
-    ).to("cuda")
+    )
+    pipe.enable_vae_slicing()
+    pipe.enable_vae_tiling()
+    pipe.enable_attention_slicing()
+    pipe.to("cuda")
     pipe = _disable_safety_checker(pipe)
     for category in CATEGORIES_FOR_MANIPULATION:
         selected = _selected_known_for_category_and_manipulation(category, 'sd_inpaint')
@@ -231,6 +248,7 @@ def manipulate_image_with_stable_diffusion_inpainting():
                 print(f"[Stable Diffusion Inpainting] Manipulating {path} with {prompt}")
                 with Image.open(path) as img:
                     img = img.convert("RGB")
+                    img = _resize(img)
                     gen, seed = make_generator()
                     mask = _random_mask(img.size)
                     out = pipe(
@@ -253,7 +271,11 @@ def manipulate_image_with_stable_diffusion_inpainting():
 def manipulate_image_with_stable_diffusion_2_inpainting():
     print("Manipulating images with Stable Diffusion 2 Inpainting")
     pipe = StableDiffusionInpaintPipeline.from_pretrained("stabilityai/stable-diffusion-2-inpainting",
-                                                          torch_dtype=torch.float16).to("cuda")
+                                                          torch_dtype=torch.float16)
+    pipe.enable_vae_slicing()
+    pipe.enable_vae_tiling()
+    pipe.enable_attention_slicing()
+    pipe.to("cuda")
     pipe = _disable_safety_checker(pipe)
     for category in CATEGORIES_FOR_MANIPULATION:
         selected = _selected_known_for_category_and_manipulation(category, 'sd_2_inpaint')
@@ -269,6 +291,7 @@ def manipulate_image_with_stable_diffusion_2_inpainting():
                 print(f"[Stable Diffusion 2 Inpainting] Manipulating {path} with {prompt}")
                 with Image.open(path) as img:
                     img = img.convert("RGB")
+                    img = _resize(img)
                     gen, seed = make_generator()
                     mask = _random_mask(img.size)
                     out = pipe(
