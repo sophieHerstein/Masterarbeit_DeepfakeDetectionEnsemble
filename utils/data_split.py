@@ -1,111 +1,236 @@
-#TODO: finalisieren
-
+import os
 import shutil
 import random
-from pathlib import Path
-from typing import Dict, List, Tuple
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+from config import CONFIG, CATEGORIES
 
-def split_and_copy_images(
-    input_paths_by_label: Dict[str, List[str]],
-    output_root: str,
-    split: Tuple[float, float, float] = (0.7, 0.15, 0.15),
-    seed: int = 42,
-    recursive: bool = True,
-    allow_duplicates_with_suffix: bool = True,
-) -> None:
-    """
-    input_paths_by_label: dict mit Keys 'real' und/oder 'fake' und jeweils einer Liste von Ordnerpfaden.
-        Beispiel:
-        {
-            "real": ["data/real_set1", "data/real_set2"],
-            "fake": ["data/fake_a", "data/fake_b"]
-        }
+IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
+LABEL_DIR = {"real": "0_real", "fake": "1_fake"}
+SUBSETS = ["train", "val", "test"]
+SUBSET_TARGETS = {"train": 1500, "val": 300, "test": 300}  # je Kategorie & Label
+PLANNING_ORDER = ["test", "val"]  # train ergibt sich als Rest → garantiert exakte Summen
 
-    output_root: Zielbasisordner. Darunter werden erzeugt:
-        train/0_real, train/1_fake, val/0_real, val/1_fake, test/0_real, test/1_fake
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    split: (train, val, test) Anteile in Summe ≈ 1.0
-    seed: Zufallsseed für reproduzierbares Shufflen
-    recursive: True -> rekursiv alle Unterordner scannen
-    allow_duplicates_with_suffix: Falls gleiche Dateinamen kollidieren, hänge Suffix an (behält Originalnamen weitgehend).
-    """
-    # Validierung
-    assert abs(sum(split) - 1.0) < 1e-6, "split muss zu 1.0 aufsummieren (z.B. (0.7, 0.15, 0.15))"
-    for label in input_paths_by_label:
-        if label not in {"real", "fake"}:
-            raise ValueError(f"Unbekanntes Label '{label}'. Erlaubt: 'real', 'fake'")
+RNG = random.Random(42)
 
-    random.seed(seed)
-    output_root = Path(output_root)
+# building\
+#     manipulated\
+#         sd2\ -350- -> 250/50/50
+#         sd15\ -350- -> 250/50/50
+#         sd\ -350- -> 250/50/50
+#     realistic\
+#         architecture\ -2100- -> 1500/300/300
+#     synthetic\
+#         dreamlike\ -350- -> 250/50/50
+#         juggernaut\ -350- -> 250/50/50
+#         sd\ -350- -> 250/50/50
+# human\
+#     manipulated\
+#         sd2\ -175-
+#         sd15\ -175-
+#         sd\ -175-
+#     realistic\
+#         celeba\ -1050- -> 750/150/150
+#         faceforensics\ -1050- -> 750/150/150
+#     synthetic\
+#         dreamlike\ -350- -> 250/50/50
+#         juggernaut\ -350- -> 250/50/50
+#         sd\ -350- -> 250/50/50
+# human_2\
+#     manipulated\
+#         sd2\ -175-
+#         sd15\ -175-
+#         sd\ -175-
+# landscape\
+#     manipulated\
+#         sd2\ -350- -> 250/50/50
+#         sd15\ -350- -> 250/50/50
+#         sd\ -350- -> 250/50/50
+#     realistic\
+#         lhq\ -2100- -> 1500/300/300
+#     synthetic\
+#         dreamlike\ -350- -> 250/50/50
+#         juggernaut\ -350- -> 250/50/50
+#         sd\ -350- -> 250/50/50
 
-    # Zielordner vorbereiten
-    subsets = ["train", "val", "test"]
-    label_map = {"real": "0_real", "fake": "1_fake"}
-    for subset in subsets:
-        for k, v in label_map.items():
-            (output_root / subset / v).mkdir(parents=True, exist_ok=True)
+TRAIN_FOR_350 = 250
+TEST_AND_VAL_FOR_350 = 50
+TRAIN_FOR_2100 = 1500
+TEST_AND_VAL_FOR_2100 = 300
+TRAIN_FOR_1050 = 750
+TEST_AND_VAL_FOR_1050 = 150
+TRAIN_FOR_175 = 125
+TEST_AND_VAL_FOR_175 = 25
 
-    def list_images(folder: Path) -> List[Path]:
-        if recursive:
-            files = [p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
-        else:
-            files = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
-        return files
 
-    # Dateien je Label sammeln
-    files_by_label = {"real": [], "fake": []}
-    for label, folders in input_paths_by_label.items():
-        for fpath in folders:
-            p = Path(fpath)
-            if not p.exists():
-                print(f"[WARN] Eingabepfad nicht gefunden: {p}")
-                continue
-            files = list_images(p)
-            files_by_label[label].extend(files)
+def split_human():
+    print("[INFO] Split images for human")
+    human_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "human")
+    human2_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "human_2")
 
-    # Split & Kopieren pro Label
-    def copy_with_collision_handling(src: Path, dst_dir: Path) -> None:
-        dst = dst_dir / src.name
-        if dst.exists() and allow_duplicates_with_suffix:
-            stem, ext = dst.stem, dst.suffix
-            i = 1
-            while dst.exists():
-                dst = dst_dir / f"{stem}__dup{i}{ext}"
-                i += 1
-        shutil.copy2(src, dst)
+    human_manipulated_root = os.path.join(human_root, "manipulated")
+    human2_manipulated_root = os.path.join(human2_root, "manipulated")
+    human_synthetic_root = os.path.join(human_root, "synthetic")
+    human_realistic_root = os.path.join(human_root, "realistic")
 
-    for label in ["real", "fake"]:
-        files = files_by_label[label]
-        if not files:
-            print(f"[INFO] Keine Dateien für Label '{label}' gefunden.")
-            continue
+    for d in os.listdir(human_manipulated_root):
+        file_path = os.path.join(human_manipulated_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_175]
+        val = files[TEST_AND_VAL_FOR_175:TEST_AND_VAL_FOR_175 + TEST_AND_VAL_FOR_175]
+        train = files[TEST_AND_VAL_FOR_175 + TEST_AND_VAL_FOR_175:]
+        copy_files(file_path, test, "test", "human", "1_fake")
+        copy_files(file_path, train, "train", "human", "1_fake")
+        copy_files(file_path, val, "val", "human", "1_fake")
 
-        random.shuffle(files)
-        n = len(files)
-        n_train = int(n * split[0])
-        n_val = int(n * split[1])
-        n_test = n - n_train - n_val  # restliche Bilder gehen in test
+    for d in os.listdir(human2_manipulated_root):
+        file_path = os.path.join(human2_manipulated_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_175]
+        val = files[TEST_AND_VAL_FOR_175:TEST_AND_VAL_FOR_175 + TEST_AND_VAL_FOR_175]
+        train = files[TEST_AND_VAL_FOR_175 + TEST_AND_VAL_FOR_175:]
+        copy_files(file_path, test, "test", "human", "1_fake")
+        copy_files(file_path, train, "train", "human", "1_fake")
+        copy_files(file_path, val, "val", "human", "1_fake")
 
-        train_files = files[:n_train]
-        val_files = files[n_train:n_train + n_val]
-        test_files = files[n_train + n_val:]
+    for d in os.listdir(human_synthetic_root):
+        file_path = os.path.join(human_synthetic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_350]
+        val = files[TEST_AND_VAL_FOR_350:TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350]
+        train = files[TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350:]
+        copy_files(file_path, test, "test", "human", "1_fake")
+        copy_files(file_path, train, "train", "human", "1_fake")
+        copy_files(file_path, val, "val", "human", "1_fake")
 
-        # Zielordner nach Spezifikation
-        label_dirname = label_map[label]
-        out_train = output_root / "train" / label_dirname
-        out_val = output_root / "val" / label_dirname
-        out_test = output_root / "test" / label_dirname
+    for d in os.listdir(human_realistic_root):
+        file_path = os.path.join(human_realistic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_1050]
+        val = files[TEST_AND_VAL_FOR_1050:TEST_AND_VAL_FOR_1050 + TEST_AND_VAL_FOR_1050]
+        train = files[TEST_AND_VAL_FOR_1050 + TEST_AND_VAL_FOR_1050:]
+        copy_files(file_path, test, "test", "human", "0_real")
+        copy_files(file_path, train, "train", "human", "0_real")
+        copy_files(file_path, val, "val", "human", "0_real")
 
-        for src in train_files:
-            copy_with_collision_handling(src, out_train)
-        for src in val_files:
-            copy_with_collision_handling(src, out_val)
-        for src in test_files:
-            copy_with_collision_handling(src, out_test)
 
-        print(
-            f"[OK] {label}: {n} Dateien → "
-            f"train={len(train_files)}, val={len(val_files)}, test={len(test_files)}"
-        )
+def split_building():
+    print("[INFO] Split images for building")
+    building_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "building")
+
+    building_manipulated_root = os.path.join(building_root, "manipulated")
+    building_synthetic_root = os.path.join(building_root, "synthetic")
+    building_realistic_root = os.path.join(building_root, "realistic")
+
+    for d in os.listdir(building_manipulated_root):
+        file_path = os.path.join(building_manipulated_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_350]
+        val = files[TEST_AND_VAL_FOR_350:TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350]
+        train = files[TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350:]
+        copy_files(file_path, test, "test", "building", "1_fake")
+        copy_files(file_path, train, "train", "building", "1_fake")
+        copy_files(file_path, val, "val", "building", "1_fake")
+
+    for d in os.listdir(building_synthetic_root):
+        file_path = os.path.join(building_synthetic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_350]
+        val = files[TEST_AND_VAL_FOR_350:TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350]
+        train = files[TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350:]
+        copy_files(file_path, test, "test", "building", "1_fake")
+        copy_files(file_path, train, "train", "building", "1_fake")
+        copy_files(file_path, val, "val", "building", "1_fake")
+
+    for d in os.listdir(building_realistic_root):
+        file_path = os.path.join(building_realistic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_2100]
+        val = files[TEST_AND_VAL_FOR_2100:TEST_AND_VAL_FOR_2100 + TEST_AND_VAL_FOR_2100]
+        train = files[TEST_AND_VAL_FOR_2100 + TEST_AND_VAL_FOR_2100:]
+        copy_files(file_path, test, "test", "building", "0_real")
+        copy_files(file_path, train, "train", "building", "0_real")
+        copy_files(file_path, val, "val", "building", "0_real")
+
+
+def split_landscape():
+    print("[INFO] Split images for landscape")
+    landscape_root = os.path.join(PROJECT_ROOT, CONFIG["images_path"], "known", "landscape")
+
+    landscape_manipulated_root = os.path.join(landscape_root, "manipulated")
+    landscape_synthetic_root = os.path.join(landscape_root, "synthetic")
+    landscape_realistic_root = os.path.join(landscape_root, "realistic")
+
+    for d in os.listdir(landscape_manipulated_root):
+        file_path = os.path.join(landscape_manipulated_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_350]
+        val = files[TEST_AND_VAL_FOR_350:TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350]
+        train = files[TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350:]
+        copy_files(file_path, test, "test", "landscape", "1_fake")
+        copy_files(file_path, train, "train", "landscape", "1_fake")
+        copy_files(file_path, val, "val", "landscape", "1_fake")
+
+    for d in os.listdir(landscape_synthetic_root):
+        file_path = os.path.join(landscape_synthetic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_350]
+        val = files[TEST_AND_VAL_FOR_350:TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350]
+        train = files[TEST_AND_VAL_FOR_350 + TEST_AND_VAL_FOR_350:]
+        copy_files(file_path, test, "test", "landscape", "1_fake")
+        copy_files(file_path, train, "train", "landscape", "1_fake")
+        copy_files(file_path, val, "val", "landscape", "1_fake")
+
+    for d in os.listdir(landscape_realistic_root):
+        file_path = os.path.join(landscape_realistic_root, d)
+        files = [f for f in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, f))]
+        shuffle_files(files)
+        test = files[:TEST_AND_VAL_FOR_2100]
+        val = files[TEST_AND_VAL_FOR_2100:TEST_AND_VAL_FOR_2100 + TEST_AND_VAL_FOR_2100]
+        train = files[TEST_AND_VAL_FOR_2100 + TEST_AND_VAL_FOR_2100:]
+        copy_files(file_path, test, "test", "landscape", "0_real")
+        copy_files(file_path, train, "train", "landscape", "0_real")
+        copy_files(file_path, val, "val", "landscape", "0_real")
+
+
+def split_dataset():
+    split_human()
+    split_building()
+    split_landscape()
+
+
+def get_path(typ, category, fake_or_real):
+    return os.path.join(PROJECT_ROOT, CONFIG["splited_images_path"], typ, category, fake_or_real)
+
+
+def copy_files(source_path, arr, typ, category, fake_or_real):
+    for f in arr:
+        shutil.copy2(os.path.join(source_path, f), get_path(typ, category, fake_or_real))
+    print(
+        f"[INFO] Copied {len(os.listdir(get_path(typ, category, fake_or_real)))} {typ} images for {fake_or_real} {category} images")
+
+
+def shuffle_files(files):
+    return RNG.shuffle(files)
+
+
+if __name__ == "__main__":
+    output_root = os.path.join(PROJECT_ROOT, CONFIG["splited_images_path"])
+
+    # Ausgabeordner vorbereiten
+    for subset in SUBSETS:
+        for cat in CATEGORIES:
+            for label in ["real", "fake"]:
+                os.makedirs(os.path.join(output_root, subset, cat, LABEL_DIR[label]), exist_ok=True)
+
+    split_dataset()

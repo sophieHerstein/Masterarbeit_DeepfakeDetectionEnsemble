@@ -41,6 +41,7 @@ CONFIG = {
     "train_frequencies_result_log": "logs/train/frequencies/train_results.csv",
     "checkpoint_dir": "checkpoints",
     "images_path": "images",
+    "splited_images_path": "splited_images",
     "train_dir": "data/train",
     "val_dir": "data/val",
     "known_test_dir": "data/known_test",
