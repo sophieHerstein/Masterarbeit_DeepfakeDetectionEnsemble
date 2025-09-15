@@ -51,7 +51,7 @@ CATEGORIES_FOR_MANIPULATION = [*CATEGORIES, "human_2"]
 
 RNG = random.Random(42)
 
-STEPS = 30
+STEPS = 40
 GUIDANCE_SCALE = 4.5
 
 # ------------------------------------------------------------
