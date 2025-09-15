@@ -32,6 +32,7 @@ TRAININGS_VARIANTEN = [
 CONFIG = {
     "synthetic_images_log_path": "logs/image_synthesis/image_synthesis_log.csv",
     "manipulated_images_log_path": "logs/image_manipulation/image_manipulation_log.csv",
+
     "train_log_path": "logs/train",
     "train_human_result_log": "logs/train/human/train_results.csv",
     "train_building_result_log": "logs/train/building/train_results.csv",
@@ -39,19 +40,34 @@ CONFIG = {
     "train_grayscaling_result_log": "logs/train/grayscaling/train_results.csv",
     "train_edges_result_log": "logs/train/edges/train_results.csv",
     "train_frequencies_result_log": "logs/train/frequencies/train_results.csv",
+
     "checkpoint_dir": "checkpoints",
+
     "images_path": "images",
+
     "splited_images_path": "splited_images",
-    "train_dir": "data/train",
-    "val_dir": "data/val",
-    "known_test_dir": "data/known_test",
-    "unknown_test_dir": "data/unknown_test",
-    "known_test_jpeg_dir": "data/known_test_jpeg",
-    "unknown_test_jpeg_dir": "data/unknown_test_jpeg",
-    "known_test_noisy_dir": "data/known_test_noisy",
-    "unknown_test_noisy_dir": "data/unknown_test_noisy",
-    "known_test_scaled_dir": "data/known_test_scaled",
-    "unknown_test_scaled_dir": "data/unknown_test_scaled",
+
+    "building_train_dir": "data/train/building",
+    "building_val_dir": "data/val/building",
+    "landscape_train_dir": "data/train/landscape",
+    "landscape_val_dir": "data/val/landscape",
+    "human_train_dir": "data/train/human",
+    "human_val_dir": "data/val/human",
+    "grayscale_train_dir": "data/train/grayscaling",
+    "grayscale_val_dir": "data/val/grayscaling",
+    "edges_train_dir": "data/train/edges",
+    "edges_val_dir": "data/val/edges",
+    "frequency_train_dir": "data/train/frequencies",
+    "frequency_val_dir": "data/val/frequencies",
+
+    "known_test_dir": "data/test/known_test",
+    "unknown_test_dir": "data/test/unknown_test",
+    "known_test_jpeg_dir": "data/test/known_test_jpeg",
+    "unknown_test_jpeg_dir": "data/test/unknown_test_jpeg",
+    "known_test_noisy_dir": "data/test/known_test_noisy",
+    "unknown_test_noisy_dir": "data/test/unknown_test_noisy",
+    "known_test_scaled_dir": "data/test/known_test_scaled",
+    "unknown_test_scaled_dir": "data/test/unknown_test_scaled",
 
     "image_size": 224,
     "epochs": 30,

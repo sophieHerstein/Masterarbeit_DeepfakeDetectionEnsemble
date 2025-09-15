@@ -4,11 +4,8 @@ import random
 
 from config import CONFIG, CATEGORIES
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 LABEL_DIR = {"real": "0_real", "fake": "1_fake"}
 SUBSETS = ["train", "val", "test"]
-SUBSET_TARGETS = {"train": 1500, "val": 300, "test": 300}  # je Kategorie & Label
-PLANNING_ORDER = ["test", "val"]  # train ergibt sich als Rest → garantiert exakte Summen
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -217,7 +214,7 @@ def copy_files(source_path, arr, typ, category, fake_or_real):
     for f in arr:
         shutil.copy2(os.path.join(source_path, f), get_path(typ, category, fake_or_real))
     print(
-        f"[INFO] Copied {len(os.listdir(get_path(typ, category, fake_or_real)))} {typ} images for {fake_or_real} {category} images")
+        f"[INFO] Copied {len(os.listdir(source_path))} {typ} images for {fake_or_real} {category} images")
 
 
 def shuffle_files(files):

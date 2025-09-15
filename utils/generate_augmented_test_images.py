@@ -8,6 +8,9 @@ jpeg_quality = 50
 gaussian_noise_stddev = 25
 scaling_factor = 0.5
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def apply_jpeg_compression(image: Image.Image, quality: int) -> Image.Image:
     print("\nApplying JPEG compression...")
     with open("temp.jpg", "wb") as f:
@@ -65,14 +68,13 @@ def process_images(original_root, output_root_jpeg, output_root_noisy, output_ro
                 print(f"Fehler bei Datei {in_path}: {e}")
 
 if __name__ == "__main__":
-    for variante in TRAININGS_VARIANTEN:
-        original_known_root = os.path.join(CONFIG['known_test_dir'], variante)
-        output_known_root_jpeg = os.path.join(CONFIG['known_test_jpeg_dir'], variante)
-        output_known_root_noisy = os.path.join(CONFIG['known_test_noisy_dir'], variante)
-        output_known_root_scaled = os.path.join(CONFIG['known_test_scaled_dir'], variante)
+        original_known_root = os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'])
+        output_known_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['known_test_jpeg_dir'])
+        output_known_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['known_test_noisy_dir'])
+        output_known_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['known_test_scaled_dir'])
         process_images(original_known_root, output_known_root_jpeg, output_known_root_noisy, output_known_root_scaled)
-        original_unknown_root = os.path.join(CONFIG['unknown_test_dir'], variante)
-        output_unknown_root_jpeg = os.path.join(CONFIG['unknown_test_jpeg_dir'], variante)
-        output_unknown_root_noisy = os.path.join(CONFIG['unknown_test_noisy_dir'], variante)
-        output_unknown_root_scaled = os.path.join(CONFIG['unknown_test_scaled_dir'], variante)
+        original_unknown_root = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'])
+        output_unknown_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_jpeg_dir'])
+        output_unknown_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_noisy_dir'])
+        output_unknown_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_scaled_dir'])
         process_images(original_unknown_root, output_unknown_root_jpeg, output_unknown_root_noisy, output_unknown_root_scaled)
