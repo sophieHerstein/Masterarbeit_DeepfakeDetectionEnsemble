@@ -19,7 +19,6 @@ def train_model(config, model_name, variante, grid_search=False):
         transforms.Normalize([0.5] * 3, [0.5] * 3)
     ])
 
-    # TODO: richtige Pfade
     train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=transform)
     val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=transform)
 

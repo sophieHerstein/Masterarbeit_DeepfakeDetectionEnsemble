@@ -47,6 +47,9 @@ CONFIG = {
 
     "splited_images_path": "splited_images",
 
+    "train_dir":"data/train",
+    "val_dir":"data/val",
+
     "building_train_dir": "data/train/building",
     "building_val_dir": "data/val/building",
     "landscape_train_dir": "data/train/landscape",
