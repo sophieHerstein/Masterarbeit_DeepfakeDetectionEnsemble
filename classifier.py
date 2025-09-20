@@ -1,7 +1,5 @@
 import os
 from dataclasses import dataclass
-import numpy as np
-from PIL import Image
 
 import torch
 import torch.nn as nn
@@ -9,9 +7,13 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
+from utils.config import CONFIG
+
 import optuna
 
 torch.backends.cudnn.benchmark = True
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CLASSES = ["face", "building", "landscape"]
 
@@ -43,10 +45,9 @@ def get_transforms():
     return transform_train, transform_val
 
 def get_loaders(batch_size, num_workers):
-    data_root = "data/" #TODO: richtigen Pfad angeben
     tt, tv = get_transforms()
-    train_ds = datasets.ImageFolder(os.path.join(data_root, "train"), transform=tt)
-    val_ds   = datasets.ImageFolder(os.path.join(data_root, "val"),   transform=tv)
+    train_ds = datasets.ImageFolder(CONFIG["train_classifier"], transform=tt)
+    val_ds   = datasets.ImageFolder(CONFIG["val_classifier"],   transform=tv)
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
                               num_workers=num_workers, pin_memory=True)
     val_loader   = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
@@ -166,8 +167,7 @@ def search():
     print("Best val acc:", study.best_value)
     return study.best_params
 
-def final_train_and_save(params, batch=64, lr=1e-3, patience=5):
-    save_path = "" #TODO: richtigen Pfad angeben
+def final_train_and_save(params, batch, lr, patience):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     train_loader, val_loader, classes = get_loaders(batch, num_workers=4)
     cfg = TrainConfig(
@@ -180,7 +180,7 @@ def final_train_and_save(params, batch=64, lr=1e-3, patience=5):
                     filters=cfg.filters, dense=cfg.dense, dropout=cfg.dropout)
     best_val_acc = fit(model, train_loader, val_loader, cfg, verbose=True)
 
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    os.makedirs(os.path.dirname(CONFIG["checkpoint_classifier_dir"]), exist_ok=True)
     torch.save({
         "model_state": model.state_dict(),
         "classes": classes,
@@ -188,8 +188,8 @@ def final_train_and_save(params, batch=64, lr=1e-3, patience=5):
         "filters": cfg.filters,
         "dense": cfg.dense,
         "dropout": cfg.dropout
-    }, save_path)
-    print(f"Saved model to {save_path} (best val acc {best_val_acc:.4f})")
+    }, CONFIG["checkpoint_classifier_dir"])
+    print(f"Saved model to {CONFIG["checkpoint_classifier_dir"]} (best val acc {best_val_acc:.4f})")
 
 if __name__ == "__main__":
     best = search()

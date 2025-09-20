@@ -41,6 +41,10 @@ CONFIG = {
     "train_edges_result_log": "logs/train/edges/train_results.csv",
     "train_frequencies_result_log": "logs/train/frequencies/train_results.csv",
 
+    "train_classifier": "data/classifier/train",
+    "val_classifier": "data/classifier/val",
+
+    "checkpoint_classifier_dir": "checkpoints/classifier/classifier.pth",
     "checkpoint_dir": "checkpoints",
 
     "images_path": "images",
