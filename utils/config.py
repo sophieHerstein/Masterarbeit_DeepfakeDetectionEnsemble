@@ -47,6 +47,8 @@ CONFIG = {
     "checkpoint_classifier_dir": "checkpoints/classifier/classifier.pth",
     "checkpoint_dir": "checkpoints",
 
+    "quality_stats_path": "logs/quality/quality_stats.json",
+
     "images_path": "images",
 
     "splited_images_path": "splited_images",
