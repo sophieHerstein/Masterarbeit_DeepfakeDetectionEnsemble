@@ -1,6 +1,5 @@
 import json
 
-import cv2
 import numpy as np
 from PIL import Image, ImageFilter
 from scipy.special import expit
@@ -15,76 +14,61 @@ import os
 
 class Ensemble:
 
-    def _is_deepfake_grayscale(self, img):
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "grayscale"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
+    def __init__(self):
+        self.models = {
+            "grayscale": self._load_model("resnet50d", "grayscale"),
+            "edges": self._load_model("convnext_small", "edges"),
+            "frequency": self._load_model("convnext_small", "frequency"),
+            "human": self._load_model("convnext_small", "human"),
+            "building": self._load_model("convnext_small", "building"),
+            "landscape": self._load_model("resnet50d", "landscape")
+        }
 
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
+        self.transform = transforms.Compose([
             transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
             transforms.ToTensor(),
             transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
+        self.transform_gray = transforms.Compose([
+            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
+            transforms.Grayscale(num_output_channels=3),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5] * 3, [0.5] * 3)
+        ])
 
+
+    def _load_model(self, model_name, variante):
+        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
+
+        model = get_model(model_name)
+        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
+        model.eval()
+        return model
+
+    def _is_deepfake_grayscale(self, img):
         image = Image.open(img).convert("L")
-        img_tensor = transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['grayscale'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return  1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _is_deepfake_edges(self, img):
-        # Pfad zum gespeicherten Modell
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "edges"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
-
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
 
         image = Image.open(img).convert("L").filter(ImageFilter.FIND_EDGES)
-        img_tensor = transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['edges'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return 1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _is_deepfake_frequence(self, img):
-        # Pfad zum gespeicherten Modell
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "frequencies"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
-
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
-
         image = Image.open(img).convert("L")
 
         img_array = np.array(image)
@@ -99,94 +83,48 @@ class Ensemble:
         # Auf [0,255] normalisieren
         magnitude_spectrum = (magnitude_spectrum / np.max(magnitude_spectrum) * 255).astype(np.uint8)
 
-        img_tensor = transform(Image.fromarray(magnitude_spectrum)).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(Image.fromarray(magnitude_spectrum)).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['frequency'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return 1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _is_deepfake_human(self, img):
-        # Pfad zum gespeicherten Modell
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "human"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
-
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
 
         image = Image.open(img)
-        img_tensor = transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['human'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return 1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _is_deepfake_landscape(self, img):
-        # Pfad zum gespeicherten Modell
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "landscape"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
-
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
-
         image = Image.open(img)
-        img_tensor = transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['landscape'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return 1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _is_deepfake_building(self, img):
-        # Pfad zum gespeicherten Modell
-        model_name = "resnet18"  # oder welches Modell du trainiert hast
-        variante = "building"  # oder deine Variante (z. B. "freq", "gray", ...)
-        ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
-
-        # Modell wieder erstellen
-        model = get_model(model_name)
-        model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
 
         image = Image.open(img)
-        img_tensor = transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
+            logits = self.models['building'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
-        return 1 if probs.argmax().item() == "fake" else 0
+        return probs[1].item()
 
 
     def _get_quality_weight(self, img):
@@ -236,11 +174,12 @@ class Ensemble:
 
         with torch.no_grad():
             logits = model(img_tensor)
-            probs = torch.softmax(logits, dim=1)
+            probs = torch.softmax(logits, dim=1).squeeze()
             pred_class = probs.argmax(1).item()
             pred_label = ckpt["classes"][pred_class]
 
         classes = ckpt["classes"]
+
         return {cls: float(p) for cls, p in zip(classes, probs.tolist())}
 
 
@@ -341,7 +280,9 @@ class Ensemble:
         is_deepfake_grayscale = self._is_deepfake_grayscale(img)
         is_deepfake_edges = self._is_deepfake_edges(img)
 
-        deepfake_prob_based_on_category = (quality_weights[0]*is_deepfake_edges + quality_weights[1]*is_deepfake_frequence + quality_weights[2]*is_deepfake_grayscale)/3
-        deepfake_prob_based_on_quality = (category_weights['human']*is_deepfake_human + category_weights['landscape']*is_deepfake_landscape + category_weights['building']*is_deepfake_building)/3
+        deepfake_prob_based_on_category = quality_weights[0]*is_deepfake_edges + quality_weights[1]*is_deepfake_frequence + quality_weights[2]*is_deepfake_grayscale
+        deepfake_prob_based_on_quality = category_weights['human']*is_deepfake_human + category_weights['landscape']*is_deepfake_landscape + category_weights['building']*is_deepfake_building
 
-        return True if ((deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2 ) > 0.5 else False
+        deepfake_prob_based_on_quality /= sum(category_weights.values())
+
+        return ((deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2 ) > 0.5
