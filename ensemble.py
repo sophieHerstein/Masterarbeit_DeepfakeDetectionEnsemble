@@ -108,7 +108,7 @@ class Ensemble:
 
     def _is_deepfake_human(self, img):
 
-        image = Image.open(img)
+        image = Image.open(img).convert("RGB")
         img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
@@ -119,7 +119,7 @@ class Ensemble:
 
 
     def _is_deepfake_landscape(self, img):
-        image = Image.open(img)
+        image = Image.open(img).convert("RGB")
         img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
@@ -131,7 +131,7 @@ class Ensemble:
 
     def _is_deepfake_building(self, img):
 
-        image = Image.open(img)
+        image = Image.open(img).convert("RGB")
         img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():

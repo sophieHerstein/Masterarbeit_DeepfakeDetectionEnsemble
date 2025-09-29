@@ -40,7 +40,7 @@ def evaluate_model(model_name, config,test_dir):
         print(f"Keine Bilder gefunden in: {config[test_dir]}")
         return
 
-    loader = DataLoader(dataset, batch_size=config["batch_size"], shuffle=False)
+    loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
     # Modell laden
     if model_name in ["ensemble", "unweighted_ensemble"]:
@@ -138,7 +138,8 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    for name in MODELS + ["ensemble", "unweighted_ensemble"]:
+    for name in ["ensemble", "unweighted_ensemble"]:
+    # for name in MODELS + ["ensemble", "unweighted_ensemble"]:
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",
