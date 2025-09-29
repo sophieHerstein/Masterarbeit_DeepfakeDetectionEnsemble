@@ -10,15 +10,26 @@ from utils.model_loader import get_model
 from classifier import MiniCNN
 from utils.config import CONFIG
 import os
+import logging
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
 
 class Ensemble:
 
     def __init__(self):
+        self.y_prob = None
+        self.y_true = None
+        self.y_pred = None
         self.models = {
-            "grayscale": self._load_model("resnet50d", "grayscale"),
+            "grayscale": self._load_model("resnet50d", "grayscaling"),
             "edges": self._load_model("convnext_small", "edges"),
-            "frequency": self._load_model("convnext_small", "frequency"),
+            "frequency": self._load_model("convnext_small", "frequencies"),
             "human": self._load_model("convnext_small", "human"),
             "building": self._load_model("convnext_small", "building"),
             "landscape": self._load_model("resnet50d", "landscape")
@@ -36,6 +47,13 @@ class Ensemble:
             transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
 
+        self.reset_stats()  # Statistik-Container initialisieren
+
+    def reset_stats(self):
+        """Setzt die gespeicherten Vorhersagen und Labels zurück."""
+        self.y_true = []
+        self.y_pred = []
+        self.y_prob = []
 
     def _load_model(self, model_name, variante):
         ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
@@ -136,13 +154,10 @@ class Ensemble:
 
         # Qualitätsvektor berechnen
         q = self._quality_vector(gray, stats)
-        print("Qualitätsvektor:", q)
 
         # Gewichte berechnen
         w = self._ensemble_weights(q)
-        print("Gewichte:", w)
         return w
-
 
     def _get_category_weights(self, img):
         ckpt_path = CONFIG["checkpoint_classifier_dir"]
@@ -150,7 +165,7 @@ class Ensemble:
         # Laden des Checkpoints
         ckpt = torch.load(ckpt_path, map_location="cpu")
 
-        # Modell mit den gespeicherten Parametern erstellen
+        # Modell erstellen
         model = MiniCNN(
             num_classes=len(ckpt["classes"]),
             img_size=ckpt["img_size"],
@@ -168,20 +183,20 @@ class Ensemble:
             transforms.ToTensor(),
         ])
 
-        # Beispiel: ein einzelnes Bild laden
+        # Bild laden
         image = cv2.imread(img)[:, :, ::-1]  # BGR -> RGB
         img_tensor = transform(Image.fromarray(image)).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
             logits = model(img_tensor)
-            probs = torch.softmax(logits, dim=1).squeeze()
+            probs = torch.softmax(logits, dim=1)  # [1,num_classes]
             pred_class = probs.argmax(1).item()
             pred_label = ckpt["classes"][pred_class]
 
         classes = ckpt["classes"]
 
-        return {cls: float(p) for cls, p in zip(classes, probs.tolist())}
-
+        # Batch-Dimension wegnehmen
+        return {cls: float(p) for cls, p in zip(classes, probs[0].tolist())}
 
     # --------------------------------------------------------
     # 1) QUALITÄTSMERKMALE BERECHNEN
@@ -268,11 +283,16 @@ class Ensemble:
         w = (q + eps) ** alpha
         return w / w.sum()  # Normierung: Summe = 1
 
-
-    def predict(self, img):
+    def predict(self, img, label=None, verbose: bool = True):
+        """
+        img: Bildpfad
+        label: optionaler Ground Truth (0 = Real, 1 = Fake)
+        verbose: Logging der Einzelentscheidungen
+        """
         category_weights = self._get_category_weights(img)
         quality_weights = self._get_quality_weight(img)
 
+        # Einzelwahrscheinlichkeiten
         is_deepfake_human = self._is_deepfake_human(img)
         is_deepfake_landscape = self._is_deepfake_landscape(img)
         is_deepfake_building = self._is_deepfake_building(img)
@@ -280,9 +300,81 @@ class Ensemble:
         is_deepfake_grayscale = self._is_deepfake_grayscale(img)
         is_deepfake_edges = self._is_deepfake_edges(img)
 
-        deepfake_prob_based_on_category = quality_weights[0]*is_deepfake_edges + quality_weights[1]*is_deepfake_frequence + quality_weights[2]*is_deepfake_grayscale
-        deepfake_prob_based_on_quality = category_weights['human']*is_deepfake_human + category_weights['landscape']*is_deepfake_landscape + category_weights['building']*is_deepfake_building
+        # Qualitäts- und Kategorie-basiert kombinieren
+        deepfake_prob_based_on_category = (
+            quality_weights[0] * is_deepfake_edges +
+            quality_weights[1] * is_deepfake_frequence +
+            quality_weights[2] * is_deepfake_grayscale
+        )
 
-        deepfake_prob_based_on_quality /= sum(category_weights.values())
+        deepfake_prob_based_on_quality = (
+            category_weights.get("human", 0.0) * is_deepfake_human +
+            category_weights.get("landscape", 0.0) * is_deepfake_landscape +
+            category_weights.get("building", 0.0) * is_deepfake_building
+        )
 
-        return ((deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2 ) > 0.5
+        denom = sum(category_weights.values())
+        if denom > 0:
+            deepfake_prob_based_on_quality /= denom
+        else:
+            deepfake_prob_based_on_quality = 0.0
+
+        # Finale Wahrscheinlichkeit & Entscheidung
+        final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
+        prediction = int(final_prob > 0.5)
+
+        # Stats speichern
+        if label is not None:
+            self.y_true.append(label)
+            self.y_pred.append(prediction)
+            self.y_prob.append(final_prob)
+
+        if verbose:
+            logger.info(f"Prediction for {img}")
+            logger.info(f"  Final prob: {final_prob:.3f} → Prediction: {'Deepfake' if prediction else 'Real'}")
+
+        return prediction, final_prob
+
+    def report_metrics(self):
+        """Berechnet und loggt Metriken & Confusion Matrix."""
+        if not self.y_true:
+            logger.warning("Keine Daten gesammelt – hast du Labels beim predict() übergeben?")
+            return None
+
+        cm = confusion_matrix(self.y_true, self.y_pred)
+        tn, fp, fn, tp = cm.ravel()
+
+        metrics = {
+            "TP": int(tp),
+            "TN": int(tn),
+            "FP": int(fp),
+            "FN": int(fn),
+            "Accuracy": accuracy_score(self.y_true, self.y_pred),
+            "Precision": precision_score(self.y_true, self.y_pred, zero_division=0),
+            "Recall": recall_score(self.y_true, self.y_pred, zero_division=0),
+            "F1": f1_score(self.y_true, self.y_pred, zero_division=0),
+        }
+
+        logger.info("=== Evaluation Report ===")
+        logger.info(f"Confusion Matrix:\n{cm}")
+        for k, v in metrics.items():
+            logger.info(f"{k}: {v}")
+
+        return metrics, cm
+
+if __name__ == '__main__':
+    ens = Ensemble()
+    ens.reset_stats()
+
+    # Bilder + Labels
+    image_paths = [
+        "data/test/unknown_test/0_real/ffhq_1.png",
+        "data/test/unknown_test/1_fake/building_manipulated_instruct_pix2pix_add-balcony_181705278.jpg"
+    ]
+    labels = [0, 1]  # 0 = Real, 1 = Fake
+
+    for img, lbl in zip(image_paths, labels):
+        ens.predict(img, label=lbl, verbose=True)
+
+    # Am Ende alle Metriken ausgeben
+    ens.report_metrics()
