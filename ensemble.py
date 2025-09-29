@@ -22,10 +22,11 @@ logger = logging.getLogger(__name__)
 
 class Ensemble:
 
-    def __init__(self):
+    def __init__(self, weighted):
         self.y_prob = None
         self.y_true = None
         self.y_pred = None
+        self.weighted = weighted
         self.models = {
             "grayscale": self._load_model("resnet50d", "grayscaling"),
             "edges": self._load_model("convnext_small", "edges"),
@@ -289,9 +290,6 @@ class Ensemble:
         label: optionaler Ground Truth (0 = Real, 1 = Fake)
         verbose: Logging der Einzelentscheidungen
         """
-        category_weights = self._get_category_weights(img)
-        quality_weights = self._get_quality_weight(img)
-
         # Einzelwahrscheinlichkeiten
         is_deepfake_human = self._is_deepfake_human(img)
         is_deepfake_landscape = self._is_deepfake_landscape(img)
@@ -300,24 +298,42 @@ class Ensemble:
         is_deepfake_grayscale = self._is_deepfake_grayscale(img)
         is_deepfake_edges = self._is_deepfake_edges(img)
 
-        # Qualitäts- und Kategorie-basiert kombinieren
-        deepfake_prob_based_on_category = (
-            quality_weights[0] * is_deepfake_edges +
-            quality_weights[1] * is_deepfake_frequence +
-            quality_weights[2] * is_deepfake_grayscale
-        )
+        if self.weighted:
+            # Gewichtet
+            category_weights = self._get_category_weights(img)
+            quality_weights = self._get_quality_weight(img)
 
-        deepfake_prob_based_on_quality = (
-            category_weights.get("human", 0.0) * is_deepfake_human +
-            category_weights.get("landscape", 0.0) * is_deepfake_landscape +
-            category_weights.get("building", 0.0) * is_deepfake_building
-        )
+            deepfake_prob_based_on_category = (
+                    quality_weights[0] * is_deepfake_edges +
+                    quality_weights[1] * is_deepfake_frequence +
+                    quality_weights[2] * is_deepfake_grayscale
+            )
 
-        denom = sum(category_weights.values())
-        if denom > 0:
-            deepfake_prob_based_on_quality /= denom
+            deepfake_prob_based_on_quality = (
+                    category_weights.get("human", 0.0) * is_deepfake_human +
+                    category_weights.get("landscape", 0.0) * is_deepfake_landscape +
+                    category_weights.get("building", 0.0) * is_deepfake_building
+            )
+
+            denom = sum(category_weights.values())
+            if denom > 0:
+                deepfake_prob_based_on_quality /= denom
+            else:
+                deepfake_prob_based_on_quality = 0.0
+
+            mode = "weighted"
+
         else:
-            deepfake_prob_based_on_quality = 0.0
+            # Ungewichtet: einfacher Durchschnitt je Gruppe
+            deepfake_prob_based_on_category = (
+                                                      is_deepfake_edges + is_deepfake_frequence + is_deepfake_grayscale
+                                              ) / 3.0
+
+            deepfake_prob_based_on_quality = (
+                                                     is_deepfake_human + is_deepfake_landscape + is_deepfake_building
+                                             ) / 3.0
+
+            mode = "unweighted"
 
         # Finale Wahrscheinlichkeit & Entscheidung
         final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
@@ -330,7 +346,7 @@ class Ensemble:
             self.y_prob.append(final_prob)
 
         if verbose:
-            logger.info(f"Prediction for {img}")
+            logger.info(f"Prediction for {img} ({mode})")
             logger.info(f"  Final prob: {final_prob:.3f} → Prediction: {'Deepfake' if prediction else 'Real'}")
 
         return prediction, final_prob

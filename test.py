@@ -5,39 +5,12 @@ from torchvision import datasets, transforms
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import os
 import csv
-import logging
 import time
 from model_loader import get_model, MODEL_NAMES, CONFIG
 from PIL import Image
 import numpy as np
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam import GradCAM, ScoreCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-import matplotlib.pyplot as plt
 import pandas as pd
 import random
-
-
-def setup_logger(name, log_dir, variante, augmentierung):
-    os.makedirs(log_dir, exist_ok=True)
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-
-    out = os.path.join(log_dir, 'test', variante, augmentierung, f"{name}.log")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    fh = logging.FileHandler(out)
-    ch = logging.StreamHandler()
-
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    return logger
 
 def get_model_size(path):
     return round(os.path.getsize(path) / (1024 ** 2), 2)  # in MB
@@ -46,7 +19,6 @@ def get_num_parameters(model):
     return sum(p.numel() for p in model.parameters())
 
 def evaluate_model(model_name, config, variante):
-    logger = setup_logger(model_name, config["log_dir"], variante, config["variant"])
     logger.info(f"Starte Evaluation für Modell: {model_name}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -229,7 +201,6 @@ def evaluate_model(model_name, config, variante):
         logger.info(f"Grad-CAM gespeichert: {out_path}")
 
     logger.info(f"Grad-CAM: {len(sampled)} Visualisierungen gespeichert.")
-    plot_single_run(model_name, config["variant"], variante)
 
 
 if __name__ == "__main__":
@@ -250,5 +221,3 @@ if __name__ == "__main__":
                 CONFIG["result_csv"] = f"results/test/{variante}/{name}/{variant}/{name}_{variant}_{variante}_results.csv"
                 CONFIG["variant"] = variant
                 evaluate_model(name, CONFIG, variante)
-
-            plot_model_overview(name, variante)
