@@ -10,22 +10,11 @@ from utils.model_loader import get_model
 from classifier import MiniCNN
 from utils.config import CONFIG
 import os
-import logging
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
-)
-logger = logging.getLogger(__name__)
+import csv
 
 class Ensemble:
 
-    def __init__(self, weighted):
-        self.y_prob = None
-        self.y_true = None
-        self.y_pred = None
+    def __init__(self, weighted, log_csv_path=None):
         self.weighted = weighted
         self.models = {
             "grayscale": self._load_model("resnet50d", "grayscaling"),
@@ -48,13 +37,19 @@ class Ensemble:
             transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
 
-        self.reset_stats()  # Statistik-Container initialisieren
-
-    def reset_stats(self):
-        """Setzt die gespeicherten Vorhersagen und Labels zurück."""
-        self.y_true = []
-        self.y_pred = []
-        self.y_prob = []
+        self.log_csv_path = log_csv_path
+        if self.log_csv_path is not None:
+            os.makedirs(os.path.dirname(self.log_csv_path), exist_ok=True)
+            if not os.path.exists(self.log_csv_path):
+                with open(self.log_csv_path, "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        "img", "label", "prediction", "final_prob",
+                        "p_human", "p_landscape", "p_building",
+                        "p_edges", "p_frequency", "p_grayscale",
+                        "w_human", "w_landscape", "w_building",
+                        "w_edges", "w_frequency", "w_grayscale"
+                    ])
 
     def _load_model(self, model_name, variante):
         ckpt_path = os.path.join(CONFIG["checkpoint_dir"], variante, f"{model_name}_finetuned.pth")
@@ -284,113 +279,78 @@ class Ensemble:
         w = (q + eps) ** alpha
         return w / w.sum()  # Normierung: Summe = 1
 
-    def predict(self, img, label=None, verbose: bool = True):
-        """
-        img: Bildpfad
-        label: optionaler Ground Truth (0 = Real, 1 = Fake)
-        verbose: Logging der Einzelentscheidungen
-        """
+    def predict(self, img, label=None, verbose: bool = True, log: bool = True):
         # Einzelwahrscheinlichkeiten
-        is_deepfake_human = self._is_deepfake_human(img)
-        is_deepfake_landscape = self._is_deepfake_landscape(img)
-        is_deepfake_building = self._is_deepfake_building(img)
-        is_deepfake_frequence = self._is_deepfake_frequence(img)
-        is_deepfake_grayscale = self._is_deepfake_grayscale(img)
-        is_deepfake_edges = self._is_deepfake_edges(img)
+        probs = {
+            "human": self._is_deepfake_human(img),
+            "landscape": self._is_deepfake_landscape(img),
+            "building": self._is_deepfake_building(img),
+            "frequency": self._is_deepfake_frequence(img),
+            "grayscale": self._is_deepfake_grayscale(img),
+            "edges": self._is_deepfake_edges(img),
+        }
 
+        weights = {k: None for k in probs.keys()}  # default None
         if self.weighted:
-            # Gewichtet
             category_weights = self._get_category_weights(img)
             quality_weights = self._get_quality_weight(img)
 
             deepfake_prob_based_on_category = (
-                    quality_weights[0] * is_deepfake_edges +
-                    quality_weights[1] * is_deepfake_frequence +
-                    quality_weights[2] * is_deepfake_grayscale
+                    quality_weights[0] * probs["edges"] +
+                    quality_weights[1] * probs["frequency"] +
+                    quality_weights[2] * probs["grayscale"]
             )
-
             deepfake_prob_based_on_quality = (
-                    category_weights.get("human", 0.0) * is_deepfake_human +
-                    category_weights.get("landscape", 0.0) * is_deepfake_landscape +
-                    category_weights.get("building", 0.0) * is_deepfake_building
+                    category_weights.get("human", 0.0) * probs["human"] +
+                    category_weights.get("landscape", 0.0) * probs["landscape"] +
+                    category_weights.get("building", 0.0) * probs["building"]
             )
-
             denom = sum(category_weights.values())
             if denom > 0:
                 deepfake_prob_based_on_quality /= denom
             else:
                 deepfake_prob_based_on_quality = 0.0
 
-            mode = "weighted"
-
+            weights = {
+                "human": category_weights.get("human", 0.0),
+                "landscape": category_weights.get("landscape", 0.0),
+                "building": category_weights.get("building", 0.0),
+                "edges": quality_weights[0],
+                "frequency": quality_weights[1],
+                "grayscale": quality_weights[2],
+            }
         else:
-            # Ungewichtet: einfacher Durchschnitt je Gruppe
             deepfake_prob_based_on_category = (
-                                                      is_deepfake_edges + is_deepfake_frequence + is_deepfake_grayscale
+                                                      probs["edges"] + probs["frequency"] + probs["grayscale"]
                                               ) / 3.0
-
             deepfake_prob_based_on_quality = (
-                                                     is_deepfake_human + is_deepfake_landscape + is_deepfake_building
+                                                     probs["human"] + probs["landscape"] + probs["building"]
                                              ) / 3.0
-
-            mode = "unweighted"
 
         # Finale Wahrscheinlichkeit & Entscheidung
         final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
         prediction = int(final_prob > 0.5)
 
-        # Stats speichern
-        if label is not None:
-            self.y_true.append(label)
-            self.y_pred.append(prediction)
-            self.y_prob.append(final_prob)
-
         if verbose:
-            logger.info(f"Prediction for {img} ({mode})")
-            logger.info(f"  Final prob: {final_prob:.3f} → Prediction: {'Deepfake' if prediction else 'Real'}")
+            mode = "weighted" if self.weighted else "unweighted"
+            print(f"Prediction for {img} ({mode}): {final_prob:.3f}")
+
+        # ins CSV loggen
+        if log and self.log_csv_path is not None:
+            with open(self.log_csv_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    img, label if label is not None else "",
+                    prediction, f"{final_prob:.4f}",
+                    f"{probs['human']:.4f}", f"{probs['landscape']:.4f}", f"{probs['building']:.4f}",
+                    f"{probs['edges']:.4f}", f"{probs['frequency']:.4f}", f"{probs['grayscale']:.4f}",
+                    f"{weights['human']:.4f}" if weights['human'] is not None else "",
+                    f"{weights['landscape']:.4f}" if weights['landscape'] is not None else "",
+                    f"{weights['building']:.4f}" if weights['building'] is not None else "",
+                    f"{weights['edges']:.4f}" if weights['edges'] is not None else "",
+                    f"{weights['frequency']:.4f}" if weights['frequency'] is not None else "",
+                    f"{weights['grayscale']:.4f}" if weights['grayscale'] is not None else "",
+                ])
 
         return prediction, final_prob
 
-    def report_metrics(self):
-        """Berechnet und loggt Metriken & Confusion Matrix."""
-        if not self.y_true:
-            logger.warning("Keine Daten gesammelt – hast du Labels beim predict() übergeben?")
-            return None
-
-        cm = confusion_matrix(self.y_true, self.y_pred)
-        tn, fp, fn, tp = cm.ravel()
-
-        metrics = {
-            "TP": int(tp),
-            "TN": int(tn),
-            "FP": int(fp),
-            "FN": int(fn),
-            "Accuracy": accuracy_score(self.y_true, self.y_pred),
-            "Precision": precision_score(self.y_true, self.y_pred, zero_division=0),
-            "Recall": recall_score(self.y_true, self.y_pred, zero_division=0),
-            "F1": f1_score(self.y_true, self.y_pred, zero_division=0),
-        }
-
-        logger.info("=== Evaluation Report ===")
-        logger.info(f"Confusion Matrix:\n{cm}")
-        for k, v in metrics.items():
-            logger.info(f"{k}: {v}")
-
-        return metrics, cm
-
-if __name__ == '__main__':
-    ens = Ensemble()
-    ens.reset_stats()
-
-    # Bilder + Labels
-    image_paths = [
-        "data/test/unknown_test/0_real/ffhq_1.png",
-        "data/test/unknown_test/1_fake/building_manipulated_instruct_pix2pix_add-balcony_181705278.jpg"
-    ]
-    labels = [0, 1]  # 0 = Real, 1 = Fake
-
-    for img, lbl in zip(image_paths, labels):
-        ens.predict(img, label=lbl, verbose=True)
-
-    # Am Ende alle Metriken ausgeben
-    ens.report_metrics()
