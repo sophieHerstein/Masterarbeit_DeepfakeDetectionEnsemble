@@ -41,6 +41,7 @@ CONFIG = {
     "train_grayscaling_result_log": "logs/train/grayscaling/train_results.csv",
     "train_edges_result_log": "logs/train/edges/train_results.csv",
     "train_frequencies_result_log": "logs/train/frequencies/train_results.csv",
+    "train_single_models_result_log": "logs/train/single_models/train_results.csv",
 
     "train_classifier": "data/classifier/train",
     "val_classifier": "data/classifier/val",
