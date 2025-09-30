@@ -45,7 +45,7 @@ def evaluate_model(model_name, config,test_dir):
     # Modell laden
     if model_name in ["ensemble", "unweighted_ensemble"]:
         log_csv_path = os.path.join(
-            "logs", "test",
+            "logs", "test", "ensemble",
             f"{model_name}_{test_dir}_details.csv"
         )
         ensemble = Ensemble(weighted=(model_name == "ensemble"), log_csv_path=log_csv_path)
@@ -111,7 +111,7 @@ def evaluate_model(model_name, config,test_dir):
     print(f"Confusion Matrix: TN={tn}, FP={fp}, FN={fn}, TP={tp}")
 
     # Ergebnisse ins CSV schreiben
-    metrics_csv = os.path.join("results", "metrics", f"{model_name}_metrics.csv")
+    metrics_csv = os.path.join("logs", "test", f"{model_name}_metrics.csv")
     os.makedirs(os.path.dirname(metrics_csv), exist_ok=True)
     write_header = not os.path.exists(metrics_csv)
     with open(metrics_csv, "a", newline="") as f:
@@ -138,8 +138,7 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    for name in ["ensemble", "unweighted_ensemble"]:
-    # for name in MODELS + ["ensemble", "unweighted_ensemble"]:
+    for name in MODELS + ["ensemble", "unweighted_ensemble"]:
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",
