@@ -24,8 +24,8 @@ MODELS = [
 
 # Trainingsvarianten
 TRAININGS_VARIANTEN = [
-    # *CATEGORIES,
-    # *PREPROCESS_METHODS,
+    *CATEGORIES,
+    *PREPROCESS_METHODS,
     "single_models"
 ]
 
