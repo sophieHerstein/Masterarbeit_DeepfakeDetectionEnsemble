@@ -17,12 +17,12 @@ class Ensemble:
     def __init__(self, weighted, log_csv_path=None):
         self.weighted = weighted
         self.models = {
-            "grayscale": self._load_model("resnet50d", "grayscaling"),
+            "grayscale": self._load_model("convnext_small", "grayscaling"),
             "edges": self._load_model("convnext_small", "edges"),
             "frequency": self._load_model("convnext_small", "frequencies"),
             "human": self._load_model("convnext_small", "human"),
-            "building": self._load_model("convnext_small", "building"),
-            "landscape": self._load_model("resnet50d", "landscape")
+            "building": self._load_model("xception71", "building"),
+            "landscape": self._load_model("convnext_small", "landscape")
         }
 
         self.transform = transforms.Compose([
