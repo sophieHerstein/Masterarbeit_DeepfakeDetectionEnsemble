@@ -65,11 +65,13 @@ def evaluate_model(model_name, config,test_dir):
     with torch.no_grad():
         for inputs, labels in loader:
             if model_name in ["ensemble", "unweighted_ensemble"]:
+                start_time = time.time()
                 for i, path in enumerate([s[0] for s in loader.dataset.samples[num_images:num_images+len(labels)]]):
                     pred, prob = model.predict(path, label=labels[i].item(), verbose=False)
                     y_true.append(labels[i].item())
                     y_pred.append(pred)
                     y_prob.append(prob)
+                total_time += time.time() - start_time
                 num_images += len(labels)
             else:
                 inputs, labels = inputs.to(device), labels.to(device)
