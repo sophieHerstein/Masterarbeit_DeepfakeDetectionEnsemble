@@ -29,6 +29,17 @@ TRAININGS_VARIANTEN = [
     "single_models"
 ]
 
+TEST_VARIANTEN = [
+    "known_test_dir",
+    "unknown_test_dir",
+    "known_test_jpeg_dir",
+    "unknown_test_jpeg_dir",
+    "known_test_noisy_dir",
+    "unknown_test_noisy_dir",
+    "known_test_scaled_dir",
+    "unknown_test_scaled_dir"
+]
+
 # enthält Pfade und andere Parameter usw.
 CONFIG = {
     "synthetic_images_log_path": "logs/image_synthesis/image_synthesis_log.csv",

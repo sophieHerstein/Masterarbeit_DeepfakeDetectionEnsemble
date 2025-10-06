@@ -8,7 +8,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from config import TRAININGS_VARIANTEN
+from config import TRAININGS_VARIANTEN, TEST_VARIANTEN
 from config import MODELS
 
 st.set_page_config(page_title="Masterarbeit Deepfake Detection Ensemble Model Dashboard", layout="wide")
@@ -142,8 +142,7 @@ models = MODELS
 model = st.sidebar.selectbox("Modell", [*models, "ensemble", "unweighted_ensemble"]) if models else None
 
 train_types = TRAININGS_VARIANTEN
-test_types = ["known_test_dir", "unknown_test_dir", "known_test_jpeg_dir", "unknown_test_jpeg_dir",
-              "known_test_noisy_dir", "unknown_test_noisy_dir", "known_test_scaled_dir", "unknown_test_scaled_dir"]
+test_types = TEST_VARIANTEN
 
 # === Tabs ===
 tab1, tab2, tab3, tab4 = st.tabs([
