@@ -142,6 +142,6 @@ def get_test_plots():
 
 
 if __name__ == "__main__":
-    #get_train_plots()
-    #get_confusion_matrices()
+    get_train_plots()
+    get_confusion_matrices()
     get_test_plots()
