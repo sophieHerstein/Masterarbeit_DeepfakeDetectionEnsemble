@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
 from utils.model_loader import get_model
-from utils.config import CONFIG, TRAININGS_VARIANTEN, MODELS
+from utils.config import CONFIG, TRAININGS_VARIANTEN, MODELS, PREPROCESS_METHODS
 import os
 import time
 import csv
@@ -13,25 +13,45 @@ def train_model(config, model_name, variante, grid_search=False):
     device = torch.device("cuda")
     print(f"Starte Training auf Gerät: {device}")
 
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(config["image_size"], scale=(0.8, 1.0)),  # zufälliger Ausschnitt in Zielgröße
-        transforms.RandomHorizontalFlip(p=0.5),  # zufälliges Spiegeln
-        transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),  # Farbe, Kontrast, Sättigung, Helligkeit
+    base_augmentations = [
+        transforms.RandomResizedCrop(config["image_size"], scale=(0.8, 1.0)),
+        transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomApply([
             transforms.GaussianBlur(kernel_size=3),
             transforms.RandomAdjustSharpness(sharpness_factor=1.5)
-        ], p=0.3),  # leichte Unschärfe oder Schärfung mit 30% Wahrscheinlichkeit
-        transforms.RandomPerspective(distortion_scale=0.2, p=0.3),  # zufällige geometrische Verzerrung
-        transforms.ToTensor(),  # Umwandlung in Tensor
-        transforms.Normalize([0.5] * 3, [0.5] * 3)  # Normalisierung auf -1..1 Bereich
-    ])
+        ], p=0.3),
+        transforms.RandomPerspective(distortion_scale=0.2, p=0.3)
+    ]
 
-    val_transforms = transforms.Compose([
-        transforms.Resize(int(config["image_size"] * 1.1)),  # leicht größer, um Ränder zu vermeiden
-        transforms.CenterCrop(config["image_size"]),  # zentrierter Ausschnitt
+    tensor_transform = [
         transforms.ToTensor(),
         transforms.Normalize([0.5] * 3, [0.5] * 3)
-    ])
+    ]
+
+    if variante in PREPROCESS_METHODS:
+        train_transforms = transforms.Compose([
+            *base_augmentations,
+            transforms.Grayscale(num_output_channels=3),
+            *tensor_transform
+        ])
+        val_transforms = transforms.Compose([
+            transforms.Resize(int(config["image_size"] * 1.1)),
+            transforms.CenterCrop(config["image_size"]),
+            transforms.Grayscale(num_output_channels=3),
+            *tensor_transform
+        ])
+    else:
+        color_aug = [transforms.ColorJitter(0.3, 0.3, 0.3, 0.05)]
+        train_transforms = transforms.Compose([
+            *color_aug,
+            *base_augmentations,
+            *tensor_transform])
+
+        val_transforms = transforms.Compose([
+            transforms.Resize(int(config["image_size"] * 1.1)),
+            transforms.CenterCrop(config["image_size"]),
+            *tensor_transform
+        ])
 
     train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=train_transforms)
     val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=val_transforms)
