@@ -13,14 +13,28 @@ def train_model(config, model_name, variante, grid_search=False):
     device = torch.device("cuda")
     print(f"Starte Training auf Gerät: {device}")
 
-    transform = transforms.Compose([
-        transforms.Resize((config["image_size"], config["image_size"])),
+    train_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(config["image_size"], scale=(0.8, 1.0)),  # zufälliger Ausschnitt in Zielgröße
+        transforms.RandomHorizontalFlip(p=0.5),  # zufälliges Spiegeln
+        transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),  # Farbe, Kontrast, Sättigung, Helligkeit
+        transforms.RandomApply([
+            transforms.GaussianBlur(kernel_size=3),
+            transforms.RandomAdjustSharpness(sharpness_factor=1.5)
+        ], p=0.3),  # leichte Unschärfe oder Schärfung mit 30% Wahrscheinlichkeit
+        transforms.RandomPerspective(distortion_scale=0.2, p=0.3),  # zufällige geometrische Verzerrung
+        transforms.ToTensor(),  # Umwandlung in Tensor
+        transforms.Normalize([0.5] * 3, [0.5] * 3)  # Normalisierung auf -1..1 Bereich
+    ])
+
+    val_transforms = transforms.Compose([
+        transforms.Resize(int(config["image_size"] * 1.1)),  # leicht größer, um Ränder zu vermeiden
+        transforms.CenterCrop(config["image_size"]),  # zentrierter Ausschnitt
         transforms.ToTensor(),
         transforms.Normalize([0.5] * 3, [0.5] * 3)
     ])
 
-    train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=transform)
-    val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=transform)
+    train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=train_transforms)
+    val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=val_transforms)
 
     print(f"Train class_to_idx: {train_dataset.class_to_idx}")
     print(f"Val class_to_idx: {val_dataset.class_to_idx}")
@@ -144,7 +158,6 @@ def parameter_grid_search(config, grid, variante, test_model):
 
 
 if __name__ == '__main__':
-    # Parameter definieren
     param_grid = {
         "learning_rate": [1e-4, 5e-5],
         "batch_size": [16, 32]
