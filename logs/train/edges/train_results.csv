@@ -1,0 +1,7 @@
+Modell,Train-Acc,Val-Acc,Loss,Trainzeit (s),last epoch
+xception71,97.56,89.72,40.0495,1631,12
+mobilenetv2_100,96.56,86.78,24.8656,1376,17
+tf_efficientnet_b3,97.76,88.11,17.7122,2396,13
+densenet121,95.59,87.22,63.3734,732,8
+resnet50d,97.49,89.39,41.7037,1046,12
+convnext_small,98.47,89.06,11.8199,2220,15

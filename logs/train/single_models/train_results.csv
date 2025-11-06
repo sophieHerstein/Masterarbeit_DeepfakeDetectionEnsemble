@@ -1,0 +1,2 @@
+Modell,Train-Acc,Val-Acc,Loss,Trainzeit (s),last epoch
+tf_efficientnet_b3,96.73,92.94,25.0331,4649,14
