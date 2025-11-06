@@ -1,2 +1,5 @@
 Modell,Train-Acc,Val-Acc,Loss,Trainzeit (s),last epoch
 tf_efficientnet_b3,96.73,92.94,25.0331,4649,14
+densenet121,97.89,94.94,17.2018,6320,19
+resnet50d,96.76,95.61,50.3813,3090,9
+convnext_small,98.77,96.39,10.8830,3845,10

@@ -2,9 +2,7 @@
 CATEGORIES = ["human", "building", "landscape"]
 
 #Methoden für das Vorverarbeiten der Bilder
-PREPROCESS_METHODS = [
-    # "grayscaling", "edges",
-                      "frequencies"]
+PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
 
 # Anzahl der Varianten je Prompt
 SYNTHETIC_VARIANTEN_BEKANNT = 14
@@ -16,8 +14,8 @@ MANIPULATED_HUMAN_VARIANTEN_BEKANNT = 7
 
 # CNN Modelle
 MODELS = [
-    # "xception71",
-	# "mobilenetv2_100",
+    "xception71",
+	"mobilenetv2_100",
     "tf_efficientnet_b3",
 	"densenet121",
 	"resnet50d",
@@ -26,7 +24,7 @@ MODELS = [
 
 # Trainingsvarianten
 TRAININGS_VARIANTEN = [
-    #*CATEGORIES,
+    *CATEGORIES,
     *PREPROCESS_METHODS,
     "single_models"
 ]
