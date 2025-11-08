@@ -25,16 +25,18 @@ class Ensemble:
             "landscape": self._load_model("convnext_small", "landscape")
         }
 
-        self.transform = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
-        ])
         self.transform_gray = transforms.Compose([
-            transforms.Resize((CONFIG["image_size"], CONFIG["image_size"])),
-            transforms.Grayscale(num_output_channels=3),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5] * 3, [0.5] * 3)
+                transforms.Resize(int(CONFIG["image_size"] * 1.1)),
+                transforms.CenterCrop(CONFIG["image_size"]),
+                transforms.Grayscale(num_output_channels=3),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5] * 3, [0.5] * 3)
+        ])
+        self.transform = transforms.Compose([
+                transforms.Resize(int(CONFIG["image_size"] * 1.1)),
+                transforms.CenterCrop(CONFIG["image_size"]),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
 
         self.log_csv_path = log_csv_path
@@ -61,7 +63,7 @@ class Ensemble:
 
     def _is_deepfake_grayscale(self, img):
         image = Image.open(img).convert("L")
-        img_tensor = self.transform_gray(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(image).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['grayscale'](img_tensor)
@@ -73,7 +75,7 @@ class Ensemble:
     def _is_deepfake_edges(self, img):
 
         image = Image.open(img).convert("L").filter(ImageFilter.FIND_EDGES)
-        img_tensor = self.transform_gray(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(image).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['edges'](img_tensor)
@@ -97,7 +99,7 @@ class Ensemble:
         # Auf [0,255] normalisieren
         magnitude_spectrum = (magnitude_spectrum / np.max(magnitude_spectrum) * 255).astype(np.uint8)
 
-        img_tensor = self.transform_gray(Image.fromarray(magnitude_spectrum)).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform_gray(Image.fromarray(magnitude_spectrum)).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['frequency'](img_tensor)
@@ -109,7 +111,7 @@ class Ensemble:
     def _is_deepfake_human(self, img):
 
         image = Image.open(img).convert("RGB")
-        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['human'](img_tensor)
@@ -120,7 +122,7 @@ class Ensemble:
 
     def _is_deepfake_landscape(self, img):
         image = Image.open(img).convert("RGB")
-        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['landscape'](img_tensor)
@@ -132,7 +134,7 @@ class Ensemble:
     def _is_deepfake_building(self, img):
 
         image = Image.open(img).convert("RGB")
-        img_tensor = self.transform(image).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.transform(image).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.models['building'](img_tensor)
