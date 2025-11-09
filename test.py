@@ -140,7 +140,8 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    for name in ["ensemble", "unweighted_ensemble"] + MODELS:
+    #for name in ["ensemble", "unweighted_ensemble"] + MODELS:
+    for name in ["ensemble", "unweighted_ensemble"]:
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",

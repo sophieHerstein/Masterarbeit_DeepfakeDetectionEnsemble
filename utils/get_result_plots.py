@@ -126,6 +126,7 @@ def get_test_plots():
         ax.bar(x - 0.5 * width, precisions, width, label="Precision")
         ax.bar(x + 0.5 * width, recalls, width, label="Recall")
         ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+        ax.bar(x + 1.5 * width, roc_aucs, width, label="ROC-AUC")
 
         # === Achsen und Beschriftung ===
         ax.set_title(f"Modellvergleich ({variante})")

@@ -46,7 +46,7 @@ class Ensemble:
                 with open(self.log_csv_path, "w", newline="") as f:
                     writer = csv.writer(f)
                     writer.writerow([
-                        "img", "label", "prediction", "final_prob",
+                        "img", "label", "prediction", "final_prob", "consistency_score",
                         "p_human", "p_landscape", "p_building",
                         "p_edges", "p_frequency", "p_grayscale",
                         "w_human", "w_landscape", "w_building",
@@ -281,6 +281,46 @@ class Ensemble:
         w = (q + eps) ** alpha
         return w / w.sum()  # Normierung: Summe = 1
 
+    # --------------------------------------------------------
+    # 5) SELF-CONSISTENCY ENSEMBLE
+    # --------------------------------------------------------
+    def _self_consistent_prob(self, probs, content_weights, quality_weights, num_variants=5):
+        """
+        Berechnet eine stabilisierte Ensemble-Vorhersage durch leichte Variation von alpha/beta.
+        Liefert final_prob und consistency_score zurück.
+        """
+        preds = []
+        for _ in range(num_variants):
+            # Kleine zufällige Variation der Gewichtung
+            alpha = np.clip(np.random.normal(0.5, 0.1), 0.0, 1.0)
+            beta = 1 - alpha
+
+            # Kombinierte Gewichte
+            w = {}
+            for k in probs.keys():
+                if k in ["human", "landscape", "building"]:
+                    w[k] = beta * content_weights.get(k, 0.0)
+                else:
+                    # edges, frequency, grayscale
+                    w[k] = alpha * quality_weights[
+                        ["edges", "frequency", "grayscale"].index(k)
+                    ]
+
+            total = sum(w.values())
+            if total > 0:
+                for k in w:
+                    w[k] /= total
+
+            # Ensemble-Wahrscheinlichkeit
+            p = sum(probs[k] * w[k] for k in probs)
+            preds.append(p)
+
+        preds = np.array(preds)
+        final_prob = preds.mean()
+        consistency_score = 1 - preds.std()  # 1 = stabil, 0 = instabil
+
+        return final_prob, consistency_score
+
     def predict(self, img, label=None, verbose: bool = True, log: bool = True):
         # Einzelwahrscheinlichkeiten
         probs = {
@@ -297,22 +337,22 @@ class Ensemble:
             category_weights = self._get_category_weights(img)
             quality_weights = self._get_quality_weight(img)
 
-            deepfake_prob_based_on_category = (
-                    quality_weights[0] * probs["edges"] +
-                    quality_weights[1] * probs["frequency"] +
-                    quality_weights[2] * probs["grayscale"]
-            )
-            deepfake_prob_based_on_quality = (
-                    category_weights.get("human", 0.0) * probs["human"] +
-                    category_weights.get("landscape", 0.0) * probs["landscape"] +
-                    category_weights.get("building", 0.0) * probs["building"]
-            )
-            denom = sum(category_weights.values())
-            if denom > 0:
-                deepfake_prob_based_on_quality /= denom
-            else:
-                deepfake_prob_based_on_quality = 0.0
-
+            # deepfake_prob_based_on_category = (
+            #         quality_weights[0] * probs["edges"] +
+            #         quality_weights[1] * probs["frequency"] +
+            #         quality_weights[2] * probs["grayscale"]
+            # )
+            # deepfake_prob_based_on_quality = (
+            #         category_weights.get("human", 0.0) * probs["human"] +
+            #         category_weights.get("landscape", 0.0) * probs["landscape"] +
+            #         category_weights.get("building", 0.0) * probs["building"]
+            # )
+            # denom = sum(category_weights.values())
+            # if denom > 0:
+            #     deepfake_prob_based_on_quality /= denom
+            # else:
+            #     deepfake_prob_based_on_quality = 0.0
+            #
             weights = {
                 "human": category_weights.get("human", 0.0),
                 "landscape": category_weights.get("landscape", 0.0),
@@ -322,15 +362,25 @@ class Ensemble:
                 "grayscale": quality_weights[2],
             }
         else:
-            deepfake_prob_based_on_category = (
-                                                      probs["edges"] + probs["frequency"] + probs["grayscale"]
-                                              ) / 3.0
-            deepfake_prob_based_on_quality = (
-                                                     probs["human"] + probs["landscape"] + probs["building"]
-                                             ) / 3.0
+            category_weights = {k: 1/6 for k in probs.keys()}
+            quality_weights = np.ones(3) / 3
 
-        # Finale Wahrscheinlichkeit & Entscheidung
-        final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
+        #     deepfake_prob_based_on_category = (
+        #                                               probs["edges"] + probs["frequency"] + probs["grayscale"]
+        #                                       ) / 3.0
+        #     deepfake_prob_based_on_quality = (
+        #                                              probs["human"] + probs["landscape"] + probs["building"]
+        #                                      ) / 3.0
+
+        # --------------------------------------------------------
+        # Self-consistency-basierte Aggregation
+        # --------------------------------------------------------
+        final_prob, consistency_score = self._self_consistent_prob(
+            probs,
+            content_weights=category_weights,
+            quality_weights=quality_weights,
+        )
+
         prediction = int(final_prob > 0.5)
 
         if verbose:
@@ -343,7 +393,7 @@ class Ensemble:
                 writer = csv.writer(f)
                 writer.writerow([
                     img, label if label is not None else "",
-                    prediction, f"{final_prob:.4f}",
+                    prediction, f"{final_prob:.4f}", f"{consistency_score:.4f}",
                     f"{probs['human']:.4f}", f"{probs['landscape']:.4f}", f"{probs['building']:.4f}",
                     f"{probs['edges']:.4f}", f"{probs['frequency']:.4f}", f"{probs['grayscale']:.4f}",
                     f"{weights['human']:.4f}" if weights['human'] is not None else "",
