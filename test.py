@@ -43,12 +43,12 @@ def evaluate_model(model_name, config,test_dir):
     loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
     # Modell laden
-    if model_name in ["ensemble", "unweighted_ensemble"]:
+    if model_name in ["ensemble", "unweighted_ensemble", "ensemble_50", "ensemble_75"]:
         log_csv_path = os.path.join(
             "logs", "test", "ensemble",
             f"{model_name}_{test_dir}_details.csv"
         )
-        ensemble = Ensemble(weighted=(model_name == "ensemble"), log_csv_path=log_csv_path)
+        ensemble = Ensemble(weighted=(model_name == "ensemble"), check_for_min_one_deepfake_classification=(model_name == "ensemble_50" or model_name == "ensemble_75"), threshold_for_check=(0.75 if model_name == "ensemble_75" else 0.5), log_csv_path=log_csv_path)
         model = ensemble
     else:
         model = get_model(model_name)
@@ -140,8 +140,8 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    #for name in ["ensemble", "unweighted_ensemble"] + MODELS:
-    for name in ["ensemble", "unweighted_ensemble"]:
+    #for name in ["ensemble", "unweighted_ensemble", "ensemble_50", "ensemble_75"] + MODELS:
+    for name in ["ensemble_50", "ensemble_75"]:
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",
