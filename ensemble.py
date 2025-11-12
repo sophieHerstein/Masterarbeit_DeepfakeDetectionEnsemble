@@ -14,13 +14,8 @@ import csv
 
 class Ensemble:
 
-    def __init__(self, weighted, check_for_min_one_deepfake_classification=False, threshold_for_check = 0.5, log_csv_path=None):
-        self.check_for_min_one_deepfake_classification = check_for_min_one_deepfake_classification
-        if self.check_for_min_one_deepfake_classification:
-            self.weighted = False
-            self.threshold_for_check = threshold_for_check
-        else:
-            self.weighted = weighted
+    def __init__(self, weighted, log_csv_path=None):
+        self.weighted = weighted
         self.models = {
             "grayscale": self._load_model("convnext_small", "grayscaling"),
             "edges": self._load_model("resnet50d", "edges"),
@@ -327,21 +322,11 @@ class Ensemble:
                 "grayscale": quality_weights[2],
             }
         else:
-            if self.check_for_min_one_deepfake_classification:
-                deepfake_prob_based_on_category = 0
-                deepfake_prob_based_on_quality = 0
-
-                if any(probs[key] > self.threshold_for_check
-                       for key in ["edges", "frequency", "grayscale", "human", "landscape", "building"]):
-                    deepfake_prob_based_on_category = 1
-                    deepfake_prob_based_on_quality = 1
-
-            else:
-                deepfake_prob_based_on_category = (
-                                                          probs["edges"] + probs["frequency"] + probs["grayscale"]
-                                                  ) / 3.0
-                deepfake_prob_based_on_quality = (
-                                                         probs["human"] + probs["landscape"] + probs["building"]
+            deepfake_prob_based_on_category = (
+                                                      probs["edges"] + probs["frequency"] + probs["grayscale"]
+                                              ) / 3.0
+            deepfake_prob_based_on_quality = (
+                                                     probs["human"] + probs["landscape"] + probs["building"]
                                              ) / 3.0
 
         # Finale Wahrscheinlichkeit & Entscheidung

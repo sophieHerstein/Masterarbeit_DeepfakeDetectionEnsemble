@@ -8,8 +8,8 @@ path = os.path.join(PROJECT_ROOT, "logs/test/ensemble/unweighted_ensemble_unknow
 df = pd.read_csv(path)
 
 print("\n=== Datensatz geladen ===")
-print(f"Samples: {len(df)} | Spalten: {len(df.columns)}\n")
 
+# === 2. Spalten definieren ===
 p_cols = ['p_human','p_landscape','p_building','p_edges','p_frequency','p_grayscale']
 w_cols = ['w_human','w_landscape','w_building','w_edges','w_frequency','w_grayscale']
 
@@ -32,7 +32,6 @@ print(f"Anzahl richtig identifizierter Deepfakes vom Building Modell {p_building
 print(f"Anzahl richtig identifizierter Deepfakes vom Edges Modell {p_edges_right_for_deepfake}")
 print(f"Anzahl richtig identifizierter Deepfakes vom frequency Modell {p_frequency_right_for_deepfake}")
 print(f"Anzahl richtig identifizierter Deepfakes vom grayscale Modell {p_grayscale_right_for_deepfake} \n")
-
 
 as_deepfake_identified_images = df[df['prediction']==1]
 fp = as_deepfake_identified_images[as_deepfake_identified_images['label']==0].copy()
