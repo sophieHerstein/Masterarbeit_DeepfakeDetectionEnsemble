@@ -2,10 +2,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from glob import glob
 import seaborn as sns
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 
 from config import TRAININGS_VARIANTEN, TEST_VARIANTEN
@@ -143,7 +141,7 @@ test_types = TEST_VARIANTEN
 
 # === Tabs ===
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit", "Vergleich der Testergebnisse", "Ensemble Analyse"
+    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit", "🏆 Vergleich der Testergebnisse", "🔍 Ensemble Analyse"
 ])
 # === Übersicht ===
 with tab1:
@@ -222,46 +220,120 @@ with tab4:
 
 # === Vergleich der Testergebnisse ===
 with tab5:
-    st.header("🧪 Testergebnisse")
+    st.header("🏆 Testergebnisse")
     test_type = st.selectbox("Testarten", test_types, key="testtypes_tab5") if test_types else None
 
-    for variante in TEST_VARIANTEN:
-        # === Daten sammeln ===
-        models = []
-        accuracies, precisions, recalls, f1_scores, roc_aucs = [], [], [], [], []
+    # === Daten sammeln ===
+    data = []
+    for m in [*MODELS, "ensemble", "unweighted_ensemble"]:
+        test_df = load_test_results(m)
+        df = test_df.loc[test_df['TestVariante'] == test_type]
+        if df.empty:
+            continue
+        data.append({
+            "Model": model,
+            "Accuracy": df["Accuracy"].iloc[0],
+            "Precision": df["Precision"].iloc[0],
+            "Recall": df["Recall"].iloc[0],
+            "F1-Score": df["F1-Score"].iloc[0],
+            "ROC-AUC": df["ROC-AUC"].iloc[0]
+        })
 
-        for model in [*MODELS, "ensemble", "unweighted_ensemble"]:
-            file = load_test_results(model)
-            df = pd.read_csv(file)
-            df = df.loc[df['TestVariante'] == variante]
-            if df.empty:
-                continue
-            models.append(model)
-            accuracies.append(df["Accuracy"].iloc[0])
-            precisions.append(df["Precision"].iloc[0])
-            recalls.append(df["Recall"].iloc[0])
-            f1_scores.append(df["F1-Score"].iloc[0])
-            roc_aucs.append(df["ROC-AUC"].iloc[0])
+    if not data:
+        st.warning("Keine Daten für diese Testvariante gefunden.")
+        st.stop()
 
-        # === Plot vorbereiten ===
-        x = np.arange(len(models))
-        width = 0.15
+    # === Sortier-Option ===
+    sort_metric = st.radio(
+        "Sortiere nach:",
+        ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"],
+        horizontal=True
+    )
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+    # === Sortieren ===
+    data = sorted(data, key=lambda x: x[sort_metric], reverse=True)
 
-        ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
-        ax.bar(x - 0.5 * width, precisions, width, label="Precision")
-        ax.bar(x + 0.5 * width, recalls, width, label="Recall")
-        ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
-        ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+    # === Plot vorbereiten ===
+    models = [d["Model"] for d in data]
+    accuracies = [d["Accuracy"] for d in data]
+    precisions = [d["Precision"] for d in data]
+    recalls = [d["Recall"] for d in data]
+    f1_scores = [d["F1-Score"] for d in data]
+    roc_aucs = [d["ROC-AUC"] for d in data]
 
-        # === Achsen und Beschriftung ===
-        ax.set_title(f"Modellvergleich ({variante})")
-        ax.set_xticks(x)
-        ax.set_xticklabels(models, rotation=45)
-        ax.legend()
-        plt.tight_layout()
+    x = np.arange(len(models))
+    width = 0.15
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-        st.pyplot(fig)
+    ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
+    ax.bar(x - 0.5 * width, precisions, width, label="Precision")
+    ax.bar(x + 0.5 * width, recalls, width, label="Recall")
+    ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+    ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+
+    ax.set_title(f"Modellvergleich ({test_type}) – sortiert nach {sort_metric}")
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=45)
+    ax.legend()
+    plt.tight_layout()
+
+    st.pyplot(fig)
 
 # === Analyse der Ensemble Ergebnisse ===
+with tab6:
+    st.header("🔍 Ensemble Analyse")
+    print(model, model in ["ensemble", "unweighted_ensemble"])
+    if model in ["ensemble", "unweighted_ensemble"]:
+        test_type = st.selectbox("Testarten", test_types, key="testtypes_tab6") if test_types else None
+
+        df = load_ensemble_results(model, test_type)
+        p_cols = ['p_human', 'p_landscape', 'p_building', 'p_edges', 'p_frequency', 'p_grayscale']
+        w_cols = ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale']
+
+        st.subheader("Nicht als Deepfake identifizierte Bilder - False Negatives")
+        not_as_deepfake_identified_images = df[df['prediction'] == 0]
+        fn = not_as_deepfake_identified_images[not_as_deepfake_identified_images['label'] == 1].copy()
+        st.dataframe(fn, hide_index=True, use_container_width=True)
+        fn['num_of_correct_models'] = (fn[p_cols] >= 0.5).sum(axis=1)
+
+        p_human_right_for_deepfake = (fn['p_human'] >= 0.5).sum()
+        p_landscape_right_for_deepfake = (fn['p_landscape'] >= 0.5).sum()
+        p_building_right_for_deepfake = (fn['p_building'] >= 0.5).sum()
+        p_edges_right_for_deepfake = (fn['p_edges'] >= 0.5).sum()
+        p_frequency_right_for_deepfake = (fn['p_frequency'] >= 0.5).sum()
+        p_grayscale_right_for_deepfake = (fn['p_grayscale'] >= 0.5).sum()
+
+        st.subheader("Statistiken")
+        st.text(f"Anzahl nicht erkannter Deepfakes {len(fn)}")
+        st.text(f"Durchschnittliche Anzahl richtiger Modelle {fn['num_of_correct_models'].mean()}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom Human Modell {p_human_right_for_deepfake}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom Landscape Modell {p_landscape_right_for_deepfake}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom Building Modell {p_building_right_for_deepfake}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom Edges Modell {p_edges_right_for_deepfake}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom frequency Modell {p_frequency_right_for_deepfake}")
+        st.text(f"Anzahl richtig identifizierter Deepfakes vom grayscale Modell {p_grayscale_right_for_deepfake} \n")
+
+        st.subheader("Nicht als Real Bilder identifizierte Bilder - False Positives")
+        as_deepfake_identified_images = df[df['prediction'] == 1]
+        fp = as_deepfake_identified_images[as_deepfake_identified_images['label'] == 0].copy()
+        st.dataframe(fp, hide_index=True, use_container_width=True)
+        fp['num_of_correct_models'] = (fp[p_cols] < 0.5).sum(axis=1)
+
+        p_human_right_for_not_deepfake = (fp['p_human'] < 0.5).sum()
+        p_landscape_right_for_not_deepfake = (fp['p_landscape'] < 0.5).sum()
+        p_building_right_for_not_deepfake = (fp['p_building'] < 0.5).sum()
+        p_edges_right_for_not_deepfake = (fp['p_edges'] < 0.5).sum()
+        p_frequency_right_for_not_deepfake = (fp['p_frequency'] < 0.5).sum()
+        p_grayscale_right_for_not_deepfake = (fp['p_grayscale'] < 0.5).sum()
+
+        st.subheader("Statistiken")
+        st.text(f"Anzahl falsch identifizierter Deepfakes {len(fp)}")
+        st.text(f"Durchschnittliche Anzahl richtiger Modelle {fp['num_of_correct_models'].mean()}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom Human Modell {p_human_right_for_not_deepfake}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom Landscape Modell {p_landscape_right_for_not_deepfake}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom Building Modell {p_building_right_for_not_deepfake}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom Edges Modell {p_edges_right_for_not_deepfake}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom frequency Modell {p_frequency_right_for_not_deepfake}")
+        st.text(f"Anzahl richtiger identifizierter Real Bilder vom grayscale Modell {p_grayscale_right_for_not_deepfake}")
+    else:
+        st.info("Bitte wähle ein Ensemble Modell aus der Seitenleiste")
