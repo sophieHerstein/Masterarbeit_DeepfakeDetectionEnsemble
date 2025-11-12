@@ -1,13 +1,9 @@
 import os
 
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import roc_auc_score, accuracy_score
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path = os.path.join(PROJECT_ROOT, "logs/test/ensemble/ensemble_unknown_test_dir_details.csv")
+path = os.path.join(PROJECT_ROOT, "logs/test/ensemble/unweighted_ensemble_unknown_test_dir_details.csv")
 
 df = pd.read_csv(path)
 
@@ -17,37 +13,43 @@ print(f"Samples: {len(df)} | Spalten: {len(df.columns)}\n")
 p_cols = ['p_human','p_landscape','p_building','p_edges','p_frequency','p_grayscale']
 w_cols = ['w_human','w_landscape','w_building','w_edges','w_frequency','w_grayscale']
 
-print("=== Grundprüfung ===")
-print("Label-Verteilung:", df['label'].value_counts(normalize=True).to_dict())
-print("Prediction-Verteilung:", df['prediction'].value_counts(normalize=True).to_dict())
-print("\nWertebereiche:")
-for c in ['final_prob'] + p_cols + w_cols:
-    print(f" {c:15s} -> {df[c].min():.3f} .. {df[c].max():.3f}")
+not_as_deepfake_identified_images = df[df['prediction']==0]
+fn = not_as_deepfake_identified_images[not_as_deepfake_identified_images['label']==1].copy()
+fn['num_of_correct_models'] =(fn[p_cols] >= 0.5).sum(axis=1)
+
+p_human_right_for_deepfake = (fn['p_human'] >= 0.5).sum()
+p_landscape_right_for_deepfake = (fn['p_landscape'] >= 0.5).sum()
+p_building_right_for_deepfake = (fn['p_building'] >= 0.5).sum()
+p_edges_right_for_deepfake = (fn['p_edges'] >= 0.5).sum()
+p_frequency_right_for_deepfake = (fn['p_frequency'] >= 0.5).sum()
+p_grayscale_right_for_deepfake = (fn['p_grayscale'] >= 0.5).sum()
+
+print(f"Anzahl nicht erkannter Deepfakes {len(fn)}")
+print(f"Durchschnittliche Anzahl richtiger Modelle {fn['num_of_correct_models'].mean()}")
+print(f"Anzahl richtig identifizierter Deepfakes vom Human Modell {p_human_right_for_deepfake}")
+print(f"Anzahl richtig identifizierter Deepfakes vom Landscape Modell {p_landscape_right_for_deepfake}")
+print(f"Anzahl richtig identifizierter Deepfakes vom Building Modell {p_building_right_for_deepfake}")
+print(f"Anzahl richtig identifizierter Deepfakes vom Edges Modell {p_edges_right_for_deepfake}")
+print(f"Anzahl richtig identifizierter Deepfakes vom frequency Modell {p_frequency_right_for_deepfake}")
+print(f"Anzahl richtig identifizierter Deepfakes vom grayscale Modell {p_grayscale_right_for_deepfake} \n")
 
 
-plt.figure(figsize=(8,6))
-corr = df[p_cols].corr()
-sns.heatmap(corr, annot=True, cmap='coolwarm', vmin=0, vmax=1)
-plt.title("Korrelation der Modellwahrscheinlichkeiten")
-plt.show()
+as_deepfake_identified_images = df[df['prediction']==1]
+fp = as_deepfake_identified_images[as_deepfake_identified_images['label']==0].copy()
+fp['num_of_correct_models'] =(fp[p_cols] < 0.5).sum(axis=1)
 
-print("[Interpretation] Sehr hohe Korrelationen (>0.9) bedeuten, dass die Modelle sehr ähnlich entscheiden "
-      "und das Ensemble kaum Diversität bringt. Niedrige Werte zeigen komplementäre Modelle, "
-      "was grundsätzlich gut für Ensembles ist.\n")
+p_human_right_for_not_deepfake = (fp['p_human'] < 0.5).sum()
+p_landscape_right_for_not_deepfake = (fp['p_landscape'] < 0.5).sum()
+p_building_right_for_not_deepfake = (fp['p_building'] < 0.5).sum()
+p_edges_right_for_not_deepfake = (fp['p_edges'] < 0.5).sum()
+p_frequency_right_for_not_deepfake = (fp['p_frequency'] < 0.5).sum()
+p_grayscale_right_for_not_deepfake = (fp['p_grayscale'] < 0.5).sum()
 
-# === 8. Fehleranalyse ===
-df['correct'] = (df['prediction'] == df['label']).astype(int)
-acc_ensemble = df['correct'].mean()
-print(f"Gesamt-Accuracy Ensemble: {acc_ensemble:.3f}")
-
-# Fälle, bei denen Ensemble falsch, aber mind. ein Modell richtig
-mismatch = df[df['correct'] == 0].copy()
-mismatch['any_model_correct'] = ((mismatch[p_cols] >= 0.5).astype(int).eq(mismatch['label'], axis=0).sum(axis=1) > 0)
-any_correct_ratio = mismatch['any_model_correct'].mean()
-print(f"Fälle, bei denen Ensemble falsch war, aber mind. ein Modell richtig: {any_correct_ratio*100:.2f}%")
-
-print("\n[Interpretation] Wenn dieser Anteil hoch ist, "
-      "verliert die Gewichtung nützliche Signale. "
-      "Ist er niedrig, liegen die Fehler eher an den Modellen selbst.\n")
-
-print("\n=== Diagnose abgeschlossen ===")
+print(f"Anzahl falsch identifizierter Deepfakes {len(fp)}")
+print(f"Durchschnittliche Anzahl richtiger Modelle {fp['num_of_correct_models'].mean()}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom Human Modell {p_human_right_for_not_deepfake}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom Landscape Modell {p_landscape_right_for_not_deepfake}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom Building Modell {p_building_right_for_not_deepfake}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom Edges Modell {p_edges_right_for_not_deepfake}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom frequency Modell {p_frequency_right_for_not_deepfake}")
+print(f"Anzahl richtiger identifizierter Real Bilder vom grayscale Modell {p_grayscale_right_for_not_deepfake}")

@@ -37,6 +37,12 @@ def load_test_results(model):
         return pd.read_csv(path)
     return None
 
+def load_ensemble_results(model, test_dir):
+    path = f"logs/test/ensemble/{model}_{test_dir}_details.csv"
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    return None
+
 
 def plot_line_chart(df, x, y, title):
     fig, ax = plt.subplots()
@@ -44,15 +50,6 @@ def plot_line_chart(df, x, y, title):
     ax.set_title(title)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
-    st.pyplot(fig)
-
-
-def plot_bar_chart(data, title):
-    fig, ax = plt.subplots()
-    data.plot(kind="bar", ax=ax, legend=False)
-    ax.set_title(title)
-    ax.set_ylabel("Wert")
-    plt.xticks(rotation=45)
     st.pyplot(fig)
 
 
@@ -145,8 +142,8 @@ train_types = TRAININGS_VARIANTEN
 test_types = TEST_VARIANTEN
 
 # === Tabs ===
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit", "Vergleich der Testergebnisse", "Ensemble Analyse"
 ])
 # === Übersicht ===
 with tab1:
@@ -190,7 +187,12 @@ with tab3:
             if all(col in df.columns for col in metric_cols):
                 plot_confusionmatrix([[df["TN"].iloc[0], df["FP"].iloc[0]],
                                       [df["FN"].iloc[0], df["TP"].iloc[0]]])
-                plot_bar_chart(df[metric_cols].T, f"{model})")
+                fig, ax = plt.subplots()
+                df[metric_cols].T.plot(kind="bar", ax=ax, legend=False)
+                ax.set_title(f"{model})")
+                ax.set_ylabel("Wert")
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
         else:
             st.warning("Keine Testdaten gefunden.")
     else:
@@ -218,3 +220,48 @@ with tab4:
     else:
         st.info("Bitte wähle ein Modell aus.")
 
+# === Vergleich der Testergebnisse ===
+with tab5:
+    st.header("🧪 Testergebnisse")
+    test_type = st.selectbox("Testarten", test_types, key="testtypes_tab5") if test_types else None
+
+    for variante in TEST_VARIANTEN:
+        # === Daten sammeln ===
+        models = []
+        accuracies, precisions, recalls, f1_scores, roc_aucs = [], [], [], [], []
+
+        for model in [*MODELS, "ensemble", "unweighted_ensemble"]:
+            file = load_test_results(model)
+            df = pd.read_csv(file)
+            df = df.loc[df['TestVariante'] == variante]
+            if df.empty:
+                continue
+            models.append(model)
+            accuracies.append(df["Accuracy"].iloc[0])
+            precisions.append(df["Precision"].iloc[0])
+            recalls.append(df["Recall"].iloc[0])
+            f1_scores.append(df["F1-Score"].iloc[0])
+            roc_aucs.append(df["ROC-AUC"].iloc[0])
+
+        # === Plot vorbereiten ===
+        x = np.arange(len(models))
+        width = 0.15
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
+        ax.bar(x - 0.5 * width, precisions, width, label="Precision")
+        ax.bar(x + 0.5 * width, recalls, width, label="Recall")
+        ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+        ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+
+        # === Achsen und Beschriftung ===
+        ax.set_title(f"Modellvergleich ({variante})")
+        ax.set_xticks(x)
+        ax.set_xticklabels(models, rotation=45)
+        ax.legend()
+        plt.tight_layout()
+
+        st.pyplot(fig)
+
+# === Analyse der Ensemble Ergebnisse ===
