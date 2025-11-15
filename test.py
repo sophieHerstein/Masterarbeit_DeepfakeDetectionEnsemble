@@ -40,7 +40,7 @@ def evaluate_model(model_name, config,test_dir):
         print(f"Keine Bilder gefunden in: {config[test_dir]}")
         return
 
-    loader = DataLoader(dataset, batch_size=32, shuffle=False)
+    loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     # Modell laden
     if model_name in ["ensemble", "unweighted_ensemble"]:
@@ -85,12 +85,6 @@ def evaluate_model(model_name, config,test_dir):
                 y_pred.extend(preds.cpu().tolist())
                 y_prob.extend(probs.cpu().tolist())
 
-    # Ressourcen
-    allocated = reserved = 0.0
-    if torch.cuda.is_available():
-        allocated = torch.cuda.memory_allocated(device) / 1024 ** 2
-        reserved = torch.cuda.memory_reserved(device) / 1024 ** 2
-
     avg_time_per_image = total_time / num_images if num_images > 0 else 0
 
     # Metriken
@@ -123,25 +117,22 @@ def evaluate_model(model_name, config,test_dir):
                 "Modell", "TestVariante",
                 "Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC",
                 "TP", "TN", "FP", "FN",
-                "Avg-Time/Bild (s)", "GPU_Belegt_MB", "GPU_Reserviert_MB",
-                "Size_MB", "Params"
+                "Avg-Time/Bild (s)"
             ])
 
-        model_size = get_model_size(checkpoint_path) if model_name not in ["ensemble", "unweighted_ensemble"] else "-"
-        num_params = get_num_parameters(model) if model_name not in ["ensemble", "unweighted_ensemble"] else "-"
-
-        writer.writerow([
+    writer.writerow([
             model_name, test_dir,
             f"{acc:.4f}", f"{prec:.4f}", f"{rec:.4f}", f"{f1:.4f}", f"{roc_auc:.4f}",
             tp, tn, fp, fn,
-            f"{avg_time_per_image:.6f}", f"{allocated:.2f}", f"{reserved:.2f}",
-            model_size, num_params
+            f"{avg_time_per_image:.6f}"
         ])
+
+    print(f"Evaluation für {model_name} abgeschlossen.\n\n")
 
 
 if __name__ == "__main__":
-    #for name in ["ensemble", "unweighted_ensemble"] + MODELS:
-    for name in ["ensemble", "unweighted_ensemble"]:
+    for name in ["ensemble", "unweighted_ensemble"] + MODELS:
+    # for name in ["ensemble", "unweighted_ensemble"]:
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",

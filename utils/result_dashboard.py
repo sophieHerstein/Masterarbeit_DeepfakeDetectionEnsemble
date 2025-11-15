@@ -282,7 +282,6 @@ with tab5:
 # === Analyse der Ensemble Ergebnisse ===
 with tab6:
     st.header("🔍 Ensemble Analyse")
-    print(model, model in ["ensemble", "unweighted_ensemble"])
     if model in ["ensemble", "unweighted_ensemble"]:
         test_type = st.selectbox("Testarten", test_types, key="testtypes_tab6") if test_types else None
 
@@ -305,6 +304,9 @@ with tab6:
 
         st.subheader("Statistiken")
         st.text(f"Anzahl nicht erkannter Deepfakes {len(fn)}")
+        st.text(f"Min. Prob {fn['final_prob'].min()}")
+        st.text(f"Max. Prob {fn['final_prob'].max()}")
+        st.text(f"Mean Prob {fn['final_prob'].mean()}")
         st.text(f"Durchschnittliche Anzahl richtiger Modelle {fn['num_of_correct_models'].mean()}")
         st.text(f"Anzahl richtig identifizierter Deepfakes vom Human Modell {p_human_right_for_deepfake}")
         st.text(f"Anzahl richtig identifizierter Deepfakes vom Landscape Modell {p_landscape_right_for_deepfake}")
@@ -328,6 +330,9 @@ with tab6:
 
         st.subheader("Statistiken")
         st.text(f"Anzahl falsch identifizierter Deepfakes {len(fp)}")
+        st.text(f"Min. Prob {fp['final_prob'].min()}")
+        st.text(f"Max. Prob {fp['final_prob'].max()}")
+        st.text(f"Mean Prob {fp['final_prob'].mean()}")
         st.text(f"Durchschnittliche Anzahl richtiger Modelle {fp['num_of_correct_models'].mean()}")
         st.text(f"Anzahl richtiger identifizierter Real Bilder vom Human Modell {p_human_right_for_not_deepfake}")
         st.text(f"Anzahl richtiger identifizierter Real Bilder vom Landscape Modell {p_landscape_right_for_not_deepfake}")
