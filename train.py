@@ -13,54 +13,31 @@ def train_model(config, model_name, variante, grid_search=False):
     device = torch.device("cuda")
     print(f"Starte Training auf Gerät: {device}")
 
-    base_augmentations = [
-        transforms.RandomResizedCrop(config["image_size"], scale=(0.8, 1.0)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomApply([
-            transforms.GaussianBlur(kernel_size=3),
-            transforms.RandomAdjustSharpness(sharpness_factor=1.5)
-        ], p=0.3),
-        transforms.RandomPerspective(distortion_scale=0.2, p=0.3)
-    ]
-
-    tensor_transform = [
-        transforms.ToTensor(),
-        transforms.Normalize([0.5] * 3, [0.5] * 3)
-    ]
 
     if variante in PREPROCESS_METHODS:
-        train_transforms = transforms.Compose([
-            *base_augmentations,
-            transforms.Grayscale(num_output_channels=3),
-            *tensor_transform
-        ])
-        val_transforms = transforms.Compose([
+        transform = transforms.Compose([
             transforms.Resize(int(config["image_size"] * 1.1)),
             transforms.CenterCrop(config["image_size"]),
             transforms.Grayscale(num_output_channels=3),
-            *tensor_transform
+            transforms.ToTensor(),
+            transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
     else:
-        color_aug = [transforms.ColorJitter(0.3, 0.3, 0.3, 0.05)]
-        train_transforms = transforms.Compose([
-            *color_aug,
-            *base_augmentations,
-            *tensor_transform])
-
-        val_transforms = transforms.Compose([
+        transform = transforms.Compose([
             transforms.Resize(int(config["image_size"] * 1.1)),
             transforms.CenterCrop(config["image_size"]),
-            *tensor_transform
+            transforms.ToTensor(),
+            transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
 
-    train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=train_transforms)
-    val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=val_transforms)
+    train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=transform)
+    val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=transform)
 
     print(f"Train class_to_idx: {train_dataset.class_to_idx}")
     print(f"Val class_to_idx: {val_dataset.class_to_idx}")
 
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=True)
 
     model = get_model(model_name)
     model.to(device)

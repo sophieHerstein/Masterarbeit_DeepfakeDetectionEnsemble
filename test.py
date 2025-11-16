@@ -30,9 +30,10 @@ def evaluate_model(model_name, config,test_dir):
     print(f"Gerät: {device}")
 
     transform = transforms.Compose([
-        transforms.Resize((config["image_size"], config["image_size"])),
+        transforms.Resize(int(config["image_size"] * 1.1)),
+        transforms.CenterCrop(config["image_size"]),
         transforms.ToTensor(),
-        transforms.Normalize([0.5]*3, [0.5]*3)
+        transforms.Normalize([0.5] * 3, [0.5] * 3)
     ])
     dataset = datasets.ImageFolder(config[test_dir], transform=transform)
 
@@ -120,12 +121,12 @@ def evaluate_model(model_name, config,test_dir):
                 "Avg-Time/Bild (s)"
             ])
 
-    writer.writerow([
-            model_name, test_dir,
-            f"{acc:.4f}", f"{prec:.4f}", f"{rec:.4f}", f"{f1:.4f}", f"{roc_auc:.4f}",
-            tp, tn, fp, fn,
-            f"{avg_time_per_image:.6f}"
-        ])
+        writer.writerow([
+                model_name, test_dir,
+                f"{acc:.4f}", f"{prec:.4f}", f"{rec:.4f}", f"{f1:.4f}", f"{roc_auc:.4f}",
+                tp, tn, fp, fn,
+                f"{avg_time_per_image:.6f}"
+            ])
 
     print(f"Evaluation für {model_name} abgeschlossen.\n\n")
 
