@@ -160,6 +160,10 @@ if __name__ == '__main__':
     }
     for variante in TRAININGS_VARIANTEN:
         for m in MODELS:
+            if variante == 'edges' and m in ["xception71", "mobilenetv2_100", "tf_efficientnet_b3"]:
+                continue
+            if variante == 'human' and m != "resnet50d":
+                continue
             CONFIG["epochs"] = 3
             optimal_params = parameter_grid_search(CONFIG, param_grid, variante, m)
             CONFIG["learning_rate"] = optimal_params["learning_rate"]
