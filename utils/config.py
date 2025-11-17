@@ -1,14 +1,9 @@
 # Array mit Kategorien
 
-CATEGORIES = [
-    "human",
-    # "building", "landscape"
-]
+CATEGORIES = ["human", "building", "landscape"]
 
 #Methoden für das Vorverarbeiten der Bilder
-PREPROCESS_METHODS = [
-    # "grayscaling",
-    "edges", "frequencies"]
+PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
 
 # Anzahl der Varianten je Prompt
 SYNTHETIC_VARIANTEN_BEKANNT = 14
