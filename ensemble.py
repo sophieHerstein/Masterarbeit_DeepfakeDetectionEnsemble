@@ -18,11 +18,11 @@ class Ensemble:
         self.weighted = weighted
         self.models = {
             "grayscale": self._load_model("convnext_small", "grayscaling"),
-            "edges": self._load_model("resnet50d", "edges"),
-            "frequency": self._load_model("tf_efficientnet_b3", "frequencies"),
+            "edges": self._load_model("xception71", "edges"),
+            "frequency": self._load_model("convnext_small", "frequencies"),
             "human": self._load_model("convnext_small", "human"),
-            "building": self._load_model("xception71", "building"),
-            "landscape": self._load_model("convnext_small", "landscape")
+            "building": self._load_model("convnext_small", "building"),
+            "landscape": self._load_model("densenet121", "landscape")
         }
 
         self.transform_gray = transforms.Compose([
