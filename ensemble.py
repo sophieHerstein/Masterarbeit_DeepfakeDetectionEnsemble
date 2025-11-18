@@ -47,7 +47,7 @@ class Ensemble:
                     writer = csv.writer(f)
                     writer.writerow([
                         "img", "label", "prediction", "final_prob",
-                        #"unsure", "min_3_modelle_fuer_deepfake",
+                        "unsure", "min_3_modelle_fuer_deepfake",
                         "p_human", "p_landscape", "p_building",
                         "p_edges", "p_frequency", "p_grayscale",
                         "w_human", "w_landscape", "w_building",
@@ -332,21 +332,20 @@ class Ensemble:
 
         # Finale Wahrscheinlichkeit & Entscheidung
         final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
-        #
-        # unsure = False
-        # min_3_modelle_fuer_deepfake = None
-        # # unsicherer Bereich
-        # if self.weighted and final_prob > 0.35 and final_prob < 0.65:
-        #     unsure = True
-        #     if (probs[self.models.keys()] >= 0.5).sum(axis=1) >= 3:
-        #         min_3_modelle_fuer_deepfake = True
-        #         prediction = 1
-        #     else:
-        #         min_3_modelle_fuer_deepfake = False
-        #         prediction = 0
-        # else:
 
-        prediction = int(final_prob > 0.5)
+        unsure = False
+        min_3_modelle_fuer_deepfake = None
+        # unsicherer Bereich
+        if self.weighted and final_prob > 0.35 and final_prob < 0.65:
+            unsure = True
+            if (probs[self.models.keys()] >= 0.5).sum(axis=1) >= 3:
+                min_3_modelle_fuer_deepfake = True
+                prediction = 1
+            else:
+                min_3_modelle_fuer_deepfake = False
+                prediction = 0
+        else:
+            prediction = int(final_prob > 0.5)
 
         if verbose:
             mode = "weighted" if self.weighted else "unweighted"
@@ -359,7 +358,7 @@ class Ensemble:
                 writer.writerow([
                     img, label if label is not None else "",
                     prediction, f"{final_prob:.4f}",
-                    #unsure, min_3_modelle_fuer_deepfake,
+                    unsure, min_3_modelle_fuer_deepfake,
                     f"{probs['human']:.4f}", f"{probs['landscape']:.4f}", f"{probs['building']:.4f}",
                     f"{probs['edges']:.4f}", f"{probs['frequency']:.4f}", f"{probs['grayscale']:.4f}",
                     f"{weights['human']:.4f}" if weights['human'] is not None else "",
