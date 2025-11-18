@@ -1,9 +1,0 @@
-Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s),GPU_Belegt_MB,GPU_Reserviert_MB,Size_MB,Params
-unweighted_ensemble,known_test_dir,0.9672,0.9412,0.9967,0.9682,0.9984,897,844,56,3,0.426598,0.00,0.00,-,-
-unweighted_ensemble,unknown_test_dir,0.7178,0.6526,0.9311,0.7674,0.8611,838,454,446,62,0.436232,0.00,0.00,-,-
-unweighted_ensemble,known_test_jpeg_dir,0.7594,0.6760,0.9967,0.8056,0.9885,897,470,430,3,0.405722,0.00,0.00,-,-
-unweighted_ensemble,unknown_test_jpeg_dir,0.5394,0.5209,0.9844,0.6813,0.7344,886,85,815,14,0.362395,0.00,0.00,-,-
-unweighted_ensemble,known_test_noisy_dir,0.7994,0.9368,0.6422,0.7620,0.8922,578,861,39,322,0.401322,0.00,0.00,-,-
-unweighted_ensemble,unknown_test_noisy_dir,0.6700,0.7167,0.5622,0.6301,0.7228,506,700,200,394,0.426467,0.00,0.00,-,-
-unweighted_ensemble,known_test_scaled_dir,0.8828,0.8140,0.9922,0.8943,0.9851,893,696,204,7,0.405495,0.00,0.00,-,-
-unweighted_ensemble,unknown_test_scaled_dir,0.5783,0.5460,0.9289,0.6878,0.6480,836,205,695,64,0.415656,0.00,0.00,-,-

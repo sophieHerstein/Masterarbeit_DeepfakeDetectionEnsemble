@@ -1,9 +1,0 @@
-Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s),GPU_Belegt_MB,GPU_Reserviert_MB,Size_MB,Params
-tf_efficientnet_b3,known_test_dir,0.9089,0.9279,0.8867,0.9068,0.9740,798,838,62,102,0.000899,55.92,138.00,41.35,10699306
-tf_efficientnet_b3,unknown_test_dir,0.7489,0.7231,0.8067,0.7626,0.8219,726,622,278,174,0.000208,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,known_test_jpeg_dir,0.8700,0.8350,0.9222,0.8765,0.9549,830,736,164,70,0.000199,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,unknown_test_jpeg_dir,0.6394,0.6010,0.8300,0.6972,0.7406,747,404,496,153,0.000211,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,known_test_noisy_dir,0.7183,0.9456,0.4633,0.6219,0.8475,417,876,24,483,0.000210,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,unknown_test_noisy_dir,0.6650,0.7407,0.5078,0.6025,0.7374,457,740,160,443,0.000206,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,known_test_scaled_dir,0.8900,0.9016,0.8756,0.8884,0.9567,788,814,86,112,0.000206,55.92,998.00,41.35,10699306
-tf_efficientnet_b3,unknown_test_scaled_dir,0.6761,0.6414,0.7989,0.7115,0.7529,719,498,402,181,0.000214,55.92,998.00,41.35,10699306

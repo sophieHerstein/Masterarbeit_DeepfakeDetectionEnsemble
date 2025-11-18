@@ -1,0 +1,9 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+tf_efficientnet_b3,known_test_dir,0.9389,0.9293,0.9500,0.9396,0.9832,855,835,65,45,0.000935
+tf_efficientnet_b3,unknown_test_dir,0.7233,0.6742,0.8644,0.7575,0.8095,778,524,376,122,0.000211
+tf_efficientnet_b3,known_test_jpeg_dir,0.8639,0.8002,0.9700,0.8769,0.9649,873,682,218,27,0.000208
+tf_efficientnet_b3,unknown_test_jpeg_dir,0.5978,0.5615,0.8922,0.6893,0.7158,803,273,627,97,0.000211
+tf_efficientnet_b3,known_test_noisy_dir,0.7567,0.8799,0.5944,0.7095,0.8637,535,827,73,365,0.000209
+tf_efficientnet_b3,unknown_test_noisy_dir,0.6383,0.6329,0.6589,0.6456,0.6992,593,556,344,307,0.000208
+tf_efficientnet_b3,known_test_scaled_dir,0.9067,0.8927,0.9244,0.9083,0.9653,832,800,100,68,0.000208
+tf_efficientnet_b3,unknown_test_scaled_dir,0.6528,0.6122,0.8333,0.7059,0.7529,750,425,475,150,0.000212
