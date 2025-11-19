@@ -14,6 +14,12 @@ from utils.model_loader import get_model
 from utils.config import CONFIG, MODELS
 from ensemble import Ensemble
 
+class ImageFolderWithPaths(datasets.ImageFolder):
+    def __getitem__(self, index):
+        img, label = super().__getitem__(index)
+        path = self.samples[index][0]
+        return img, label, path
+
 
 def get_model_size(path):
     return round(os.path.getsize(path) / (1024 ** 2), 2)  # MB
@@ -153,9 +159,3 @@ if __name__ == "__main__":
         ]:
             evaluate_model(name, CONFIG, testdir)
 
-
-class ImageFolderWithPaths(datasets.ImageFolder):
-    def __getitem__(self, index):
-        img, label = super().__getitem__(index)
-        path = self.samples[index][0]
-        return img, label, path
