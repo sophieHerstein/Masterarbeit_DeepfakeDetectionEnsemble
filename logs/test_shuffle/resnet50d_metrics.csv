@@ -1,9 +1,0 @@
-Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
-resnet50d,known_test_dir,0.9633,0.9513,0.9767,0.9638,0.9943,879,855,45,21,0.000874
-resnet50d,unknown_test_dir,0.7161,0.6521,0.9267,0.7655,0.7751,834,455,445,66,0.000102
-resnet50d,known_test_jpeg_dir,0.7322,0.6530,0.9911,0.7873,0.9486,892,426,474,8,0.000099
-resnet50d,unknown_test_jpeg_dir,0.5400,0.5216,0.9656,0.6773,0.5528,869,103,797,31,0.000101
-resnet50d,known_test_noisy_dir,0.6700,0.9274,0.3689,0.5278,0.8474,332,874,26,568,0.000099
-resnet50d,unknown_test_noisy_dir,0.5672,0.5878,0.4500,0.5098,0.5899,405,616,284,495,0.000103
-resnet50d,known_test_scaled_dir,0.8617,0.7893,0.9867,0.8770,0.9716,888,663,237,12,0.000100
-resnet50d,unknown_test_scaled_dir,0.5772,0.5451,0.9333,0.6882,0.6330,840,199,701,60,0.000099

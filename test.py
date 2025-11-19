@@ -35,13 +35,14 @@ def evaluate_model(model_name, config,test_dir):
         transforms.ToTensor(),
         transforms.Normalize([0.5] * 3, [0.5] * 3)
     ])
-    dataset = datasets.ImageFolder(config[test_dir], transform=transform)
+
+    dataset = ImageFolderWithPaths(config[test_dir], transform=transform)
 
     if len(dataset) == 0:
         print(f"Keine Bilder gefunden in: {config[test_dir]}")
         return
 
-    loader = DataLoader(dataset, batch_size=32, shuffle=False)
+    loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     # Modell laden
     if model_name in ["ensemble", "unweighted_ensemble"]:
@@ -64,24 +65,30 @@ def evaluate_model(model_name, config,test_dir):
     total_time, num_images = 0, 0
 
     with torch.no_grad():
-        for inputs, labels in loader:
+        for inputs, labels, paths in loader:
             if model_name in ["ensemble", "unweighted_ensemble"]:
                 start_time = time.time()
-                for i, path in enumerate([s[0] for s in loader.dataset.samples[num_images:num_images+len(labels)]]):
+
+                for i, path in enumerate(paths):
                     pred, prob = model.predict(path, label=labels[i].item(), verbose=False)
                     y_true.append(labels[i].item())
                     y_pred.append(pred)
                     y_prob.append(prob)
+
                 total_time += time.time() - start_time
                 num_images += len(labels)
+
             else:
                 inputs, labels = inputs.to(device), labels.to(device)
+
                 start_time = time.time()
                 outputs = model(inputs)
                 total_time += time.time() - start_time
                 num_images += inputs.size(0)
+
                 probs = torch.softmax(outputs, dim=1)[:, 1]
                 _, preds = torch.max(outputs, 1)
+
                 y_true.extend(labels.cpu().tolist())
                 y_pred.extend(preds.cpu().tolist())
                 y_prob.extend(probs.cpu().tolist())
@@ -145,3 +152,10 @@ if __name__ == "__main__":
             "unknown_test_scaled_dir"
         ]:
             evaluate_model(name, CONFIG, testdir)
+
+
+class ImageFolderWithPaths(datasets.ImageFolder):
+    def __getitem__(self, index):
+        img, label = super().__getitem__(index)
+        path = self.samples[index][0]
+        return img, label, path
