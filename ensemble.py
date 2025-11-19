@@ -47,7 +47,7 @@ class Ensemble:
                     writer = csv.writer(f)
                     writer.writerow([
                         "img", "label", "prediction", "final_prob",
-                        "unsure", "min_3_modelle_fuer_deepfake",
+                        "unsure", "num_of_deepfake_classification",
                         "p_human", "p_landscape", "p_building",
                         "p_edges", "p_frequency", "p_grayscale",
                         "w_human", "w_landscape", "w_building",
@@ -334,12 +334,14 @@ class Ensemble:
         final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
 
         unsure = False
-        min_3_modelle_fuer_deepfake = None
+        num_of_deepfake_classification = 0
         # unsicherer Bereich
         if self.weighted and final_prob > 0.35 and final_prob < 0.65:
             unsure = True
-            if (probs[self.models.keys()] >= 0.5).sum(axis=1) >= 3:
-                min_3_modelle_fuer_deepfake = True
+            for k in probs.keys():
+                if probs[k] >= 0.5:
+                    num_of_deepfake_classification += 1
+            if num_of_deepfake_classification >= 3:
                 prediction = 1
             else:
                 min_3_modelle_fuer_deepfake = False
@@ -358,7 +360,7 @@ class Ensemble:
                 writer.writerow([
                     img, label if label is not None else "",
                     prediction, f"{final_prob:.4f}",
-                    unsure, min_3_modelle_fuer_deepfake,
+                    unsure, num_of_deepfake_classification,
                     f"{probs['human']:.4f}", f"{probs['landscape']:.4f}", f"{probs['building']:.4f}",
                     f"{probs['edges']:.4f}", f"{probs['frequency']:.4f}", f"{probs['grayscale']:.4f}",
                     f"{weights['human']:.4f}" if weights['human'] is not None else "",
