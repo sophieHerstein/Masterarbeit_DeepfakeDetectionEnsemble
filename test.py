@@ -8,7 +8,7 @@ from sklearn.metrics import (
 import os
 import csv
 import time
-import numpy as np
+from tqdm import tqdm
 
 from utils.model_loader import get_model
 from utils.config import CONFIG, MODELS
@@ -64,14 +64,15 @@ def evaluate_model(model_name, config,test_dir):
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
         model.to(device)
         model.eval()
-        checkpoint_path = checkpoint_path
 
     # Vorhersagen sammeln
     y_true, y_pred, y_prob = [], [], []
     total_time, num_images = 0, 0
 
     with torch.no_grad():
-        for inputs, labels, paths in loader:
+        pbar = tqdm(loader, desc=f"{model_name} - {test_dir}", unit="batch")
+
+        for inputs, labels, paths in pbar:
             if model_name in ["ensemble", "unweighted_ensemble"]:
                 start_time = time.time()
 
@@ -98,6 +99,12 @@ def evaluate_model(model_name, config,test_dir):
                 y_true.extend(labels.cpu().tolist())
                 y_pred.extend(preds.cpu().tolist())
                 y_prob.extend(probs.cpu().tolist())
+
+            # Fortschritt aktualisieren
+            pbar.set_postfix({
+                "images": num_images,
+                "avg_time/img": f"{(total_time / max(1, num_images)):.4f}s"
+            })
 
     avg_time_per_image = total_time / num_images if num_images > 0 else 0
 

@@ -333,18 +333,17 @@ class Ensemble:
         # Finale Wahrscheinlichkeit & Entscheidung
         final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
 
-        unsure = False
+        unsure = 0
         num_of_deepfake_classification = 0
         # unsicherer Bereich
         if self.weighted and final_prob > 0.35 and final_prob < 0.65:
-            unsure = True
+            unsure = 1
             for k in probs.keys():
                 if probs[k] >= 0.75:
                     num_of_deepfake_classification += 1
             if num_of_deepfake_classification >= 3:
                 prediction = 1
             else:
-                min_3_modelle_fuer_deepfake = False
                 prediction = 0
         else:
             prediction = int(final_prob > 0.5)
