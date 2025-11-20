@@ -11,11 +11,17 @@ from classifier import MiniCNN
 from utils.config import CONFIG
 import os
 import csv
+import pickle
 
 class Ensemble:
 
-    def __init__(self, weighted, log_csv_path=None):
+    def __init__(self, weighted, meta, log_csv_path=None):
         self.weighted = weighted
+        self.meta = meta
+        if self.meta:
+            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble.pkl")
+            with open(ckpt_path, 'rb') as file:
+                self.meta_classifier = pickle.load(file)
         self.models = {
             "grayscale": self._load_model("convnext_small", "grayscaling"),
             "edges": self._load_model("xception71", "edges"),
@@ -47,7 +53,6 @@ class Ensemble:
                     writer = csv.writer(f)
                     writer.writerow([
                         "img", "label", "prediction", "final_prob",
-                        "unsure", "num_of_deepfake_classification",
                         "p_human", "p_landscape", "p_building",
                         "p_edges", "p_frequency", "p_grayscale",
                         "w_human", "w_landscape", "w_building",
@@ -322,6 +327,18 @@ class Ensemble:
                 "frequency": quality_weights[1],
                 "grayscale": quality_weights[2],
             }
+        elif self.meta:
+
+            meta_features = np.array([[
+                probs["human"],
+                probs["landscape"],
+                probs["building"],
+                probs["edges"],
+                probs["frequency"],
+                probs["grayscale"]
+            ]])
+
+            predictions = self.meta_classifier.predict(meta_features)
         else:
             deepfake_prob_based_on_category = (
                                                       probs["edges"] + probs["frequency"] + probs["grayscale"]
@@ -330,22 +347,14 @@ class Ensemble:
                                                      probs["human"] + probs["landscape"] + probs["building"]
                                              ) / 3.0
 
-        # Finale Wahrscheinlichkeit & Entscheidung
-        final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
 
-        unsure = 0
-        num_of_deepfake_classification = 0
-        # unsicherer Bereich
-        if self.weighted and final_prob > 0.35 and final_prob < 0.65:
-            unsure = 1
-            for k in probs.keys():
-                if probs[k] >= 0.75:
-                    num_of_deepfake_classification += 1
-            if num_of_deepfake_classification >= 3:
-                prediction = 1
-            else:
-                prediction = 0
+
+        if self.meta:
+            prediction = int(predictions[0])
+            final_prob = ""
         else:
+            # Finale Wahrscheinlichkeit & Entscheidung
+            final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
             prediction = int(final_prob > 0.5)
 
         if verbose:
@@ -359,7 +368,6 @@ class Ensemble:
                 writer.writerow([
                     img, label if label is not None else "",
                     prediction, f"{final_prob:.4f}",
-                    unsure, num_of_deepfake_classification,
                     f"{probs['human']:.4f}", f"{probs['landscape']:.4f}", f"{probs['building']:.4f}",
                     f"{probs['edges']:.4f}", f"{probs['frequency']:.4f}", f"{probs['grayscale']:.4f}",
                     f"{weights['human']:.4f}" if weights['human'] is not None else "",
