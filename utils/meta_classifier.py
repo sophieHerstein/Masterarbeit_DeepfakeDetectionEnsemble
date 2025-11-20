@@ -49,7 +49,7 @@ def test_for_best_classifier_train_data(test_size, all_table_keys):
     filtered_lg_parameters = create_lg_param_grid(lg_parameters)
 
     kfold = KFold(n_splits=5)
-    grid_cv = GridSearchCV(estimator=LogisticRegression, param_grid=filtered_lg_parameters, scoring='accuracy', cv=kfold)
+    grid_cv = GridSearchCV(estimator=LogisticRegression(), param_grid=filtered_lg_parameters, scoring='accuracy', cv=kfold)
     result = grid_cv.fit(X_train, y_train)
 
     print("Best {} using {}".format(result.best_score_, result.best_params_))
@@ -72,7 +72,7 @@ def create_lg_param_grid(params):
     for param_combination in param_grid:
         if param_combination['penalty'] == 'l2' and param_combination['solver'] in ['newton-cg', 'lbfgs', 'liblinear', 'saga']:
             filtered_param_grid.append(ensure_list(param_combination))
-        elif param_combination['penalty'] == 'none' and param_combination['solver'] in ['newton-cg', 'lbfgs', 'saga']:
+        elif param_combination['penalty'] is None and param_combination['solver'] in ['newton-cg', 'lbfgs', 'saga']:
             filtered_param_grid.append(ensure_list(param_combination))
     return filtered_param_grid
 

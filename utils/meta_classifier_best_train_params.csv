@@ -1,0 +1,9 @@
+test_size,all_table_keys,score,params
+0.2,False,0.9868055555555555,"{'C': 0.01, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.2,True,0.9875,"{'C': 0.01, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.3,False,0.9896825396825397,"{'C': 1, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'lbfgs'}"
+0.3,True,0.9896825396825397,"{'C': 0.1, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.4,False,0.9898148148148149,"{'C': 10, 'class_weight': 'balanced', 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.4,True,0.9888888888888889,"{'C': 1, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.5,False,0.9877777777777779,"{'C': 0.01, 'class_weight': 'balanced', 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+0.5,True,0.9877777777777779,"{'C': 0.01, 'class_weight': None, 'max_iter': 200, 'penalty': None, 'solver': 'saga'}"
