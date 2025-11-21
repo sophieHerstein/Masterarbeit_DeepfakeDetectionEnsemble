@@ -121,28 +121,41 @@ def create_gbc_param_grid(params):
     return filtered
 
 def use_data_from_test_for_train_and_train_model(all_table_keys):
-    test_size = 0.7
-    c = 0.01
-    class_weight = None
-    max_iter = 100
-    penalty = None
-    solver = 'lbfgs'
-    solver_all = 'newton-cg'
-
-    train_data = pd.read_csv(f"train_{test_size}_False.csv")
-    test_data = pd.read_csv(f"test_{test_size}_False.csv")
+    train_data = pd.read_csv(f"train_meta.csv")
+    test_data = pd.read_csv(f"test_meta.csv")
 
     train_data = train_data.drop(['img'], axis=1)
     test_data = test_data.drop(['img'], axis=1)
 
+    prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
+
+    train_data["conf_max"] = train_data[prob_cols].max(axis=1)
+    train_data["conf_min"] = train_data[prob_cols].min(axis=1)
+    train_data["conf_mean"] = train_data[prob_cols].mean(axis=1)
+    train_data["conf_std"] = train_data[prob_cols].std(axis=1)
+
+    test_data["conf_max"] = test_data[prob_cols].max(axis=1)
+    test_data["conf_min"] = test_data[prob_cols].min(axis=1)
+    test_data["conf_mean"] = test_data[prob_cols].mean(axis=1)
+    test_data["conf_std"] = test_data[prob_cols].std(axis=1)
+
     if all_table_keys:
+
+        bootstrap = False
+        criterion = 'entropy'
+        max_depth = None
+        max_features = 1
+        min_samples_leaf =  2
+        min_samples_split = 5
+        n_estimators = 100
+        oob_score = False
+
         X_train = train_data.drop(columns=['label'])
         y_train = train_data['label']
         X_test = test_data.drop(columns=['label'])
         y_test = test_data['label']
 
-        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter,
-                                      penalty=penalty, solver=solver_all)
+        lr_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         lr_model.fit(X_train, y_train)
 
         with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
@@ -154,6 +167,16 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
 
         print(test_cm)
     else:
+
+        bootstrap = True
+        criterion = 'gini'
+        max_depth = None
+        max_features = 1
+        min_samples_leaf = 2
+        min_samples_split = 5
+        n_estimators = 50
+        oob_score = True
+
         train_data = train_data.drop(
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
         test_data = test_data.drop(
@@ -164,7 +187,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
         X_test = test_data.drop(columns=['label'])
         y_test = test_data['label']
 
-        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter, penalty=penalty, solver=solver)
+        lr_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         lr_model.fit(X_train, y_train)
 
         with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
@@ -214,9 +237,9 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    test_for_best_classifier_train_data(False)
-    test_for_best_classifier_train_data(True)
-    # use_data_from_test_for_train_and_train_model(True)
-    # use_data_from_test_for_train_and_train_model(False)
+    # test_for_best_classifier_train_data(False)
+    # test_for_best_classifier_train_data(True)
+    use_data_from_test_for_train_and_train_model(True)
+    use_data_from_test_for_train_and_train_model(False)
     # remove_train_images_from_test_for_ensemble_images()
     # test_meta_classifier()
