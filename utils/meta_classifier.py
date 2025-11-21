@@ -78,37 +78,61 @@ def create_lg_param_grid(params):
     return filtered_param_grid
 
 
-def use_data_from_test_for_train_and_train_model():
+def use_data_from_test_for_train_and_train_model(all_table_keys):
     test_size = 0.7
-    all_table_keys = False
     c = 0.01
     class_weight = None
     max_iter = 100
     penalty = None
     solver = 'lbfgs'
+    solver_all = 'newton-cg'
 
     train_data = pd.read_csv(f"train_{test_size}_{all_table_keys}.csv")
     test_data = pd.read_csv(f"test_{test_size}_{all_table_keys}.csv")
 
-    train_data = train_data.drop(['img', 'w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-    test_data = test_data.drop(['img', 'w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+    train_data = train_data.drop(['img'], axis=1)
+    test_data = test_data.drop(['img'], axis=1)
 
-    X_train = train_data.drop(columns=['label'])
-    y_train = train_data['label']
-    X_test = test_data.drop(columns=['label'])
-    y_test = test_data['label']
+    if all_table_keys:
+        X_train = train_data.drop(columns=['label'])
+        y_train = train_data['label']
+        X_test = test_data.drop(columns=['label'])
+        y_test = test_data['label']
 
-    lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter, penalty=penalty, solver=solver)
-    lr_model.fit(X_train, y_train)
+        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter,
+                                      penalty=penalty, solver=solver_all)
+        lr_model.fit(X_train, y_train)
 
-    with open('../checkpoints/meta_classifier_for_ensemble.pkl', 'wb') as file:
-        pickle.dump(lr_model, file)
+        with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
+            pickle.dump(lr_model, file)
 
-    test_predictions = lr_model.predict(X_test)
+        test_predictions = lr_model.predict(X_test)
 
-    test_cm = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_)
+        test_cm = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_)
 
-    print(test_cm)
+        print(test_cm)
+    else:
+        train_data = train_data.drop(
+            ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        test_data = test_data.drop(
+            ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+
+        X_train = train_data.drop(columns=['label'])
+        y_train = train_data['label']
+        X_test = test_data.drop(columns=['label'])
+        y_test = test_data['label']
+
+        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter, penalty=penalty, solver=solver)
+        lr_model.fit(X_train, y_train)
+
+        with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
+            pickle.dump(lr_model, file)
+
+        test_predictions = lr_model.predict(X_test)
+
+        test_cm = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_)
+
+        print(test_cm)
 
 
 def remove_train_images_from_test_for_ensemble_images():
@@ -145,5 +169,6 @@ if __name__ == '__main__':
     # for el in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
     #     test_for_best_classifier_train_data(el, False)
     #     test_for_best_classifier_train_data(el, True)
-    # use_data_from_test_for_train_and_train_model()
-    remove_train_images_from_test_for_ensemble_images()
+    use_data_from_test_for_train_and_train_model(True)
+    # use_data_from_test_for_train_and_train_model(False)
+    # remove_train_images_from_test_for_ensemble_images()
