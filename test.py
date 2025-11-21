@@ -152,9 +152,8 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"] + MODELS:
+    for name in ["meta_classifier_ensemble", "ensemble", "unweighted_ensemble"] + MODELS:
     # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"]:
-        name = "meta_classifier_ensemble"
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",

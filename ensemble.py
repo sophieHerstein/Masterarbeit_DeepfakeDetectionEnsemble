@@ -12,6 +12,7 @@ from utils.config import CONFIG
 import os
 import csv
 import pickle
+import pandas as pd
 
 class Ensemble:
 
@@ -329,14 +330,14 @@ class Ensemble:
             }
         elif self.meta:
 
-            meta_features = np.array([[
-                probs["human"],
-                probs["landscape"],
-                probs["building"],
-                probs["edges"],
-                probs["frequency"],
-                probs["grayscale"]
-            ]])
+            meta_features = pd.DataFrame([{
+                "p_human": probs["human"],
+                "p_landscape": probs["landscape"],
+                "p_building": probs["building"],
+                "p_edges": probs["edges"],
+                "p_frequency": probs["frequency"],
+                "p_grayscale": probs["grayscale"],
+            }])
 
             predictions = self.meta_classifier.predict(meta_features)
         else:
@@ -351,7 +352,7 @@ class Ensemble:
 
         if self.meta:
             prediction = int(predictions[0])
-            final_prob = ""
+            final_prob = int(predictions[0])
         else:
             # Finale Wahrscheinlichkeit & Entscheidung
             final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
