@@ -1,0 +1,9 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+densenet121,known_test_dir,0.9468,0.9419,0.9524,0.9471,0.9876,600,593,37,30,0.001707
+densenet121,unknown_test_dir,0.7472,0.6884,0.9033,0.7814,0.8321,813,532,368,87,0.000617
+densenet121,known_test_jpeg_dir,0.8472,0.7803,0.9667,0.8635,0.9459,870,655,245,30,0.000240
+densenet121,unknown_test_jpeg_dir,0.5817,0.5494,0.9089,0.6848,0.6514,818,229,671,82,0.000238
+densenet121,known_test_noisy_dir,0.6072,0.9406,0.2289,0.3682,0.8089,206,887,13,694,0.000245
+densenet121,unknown_test_noisy_dir,0.5461,0.7427,0.1411,0.2372,0.5994,127,856,44,773,0.000244
+densenet121,known_test_scaled_dir,0.8650,0.8022,0.9689,0.8777,0.9595,872,685,215,28,0.000237
+densenet121,unknown_test_scaled_dir,0.6144,0.5709,0.9211,0.7049,0.7335,829,277,623,71,0.000243

@@ -87,8 +87,8 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
     solver = 'lbfgs'
     solver_all = 'newton-cg'
 
-    train_data = pd.read_csv(f"train_{test_size}_{all_table_keys}.csv")
-    test_data = pd.read_csv(f"test_{test_size}_{all_table_keys}.csv")
+    train_data = pd.read_csv(f"train_{test_size}_False.csv")
+    test_data = pd.read_csv(f"test_{test_size}_False.csv")
 
     train_data = train_data.drop(['img'], axis=1)
     test_data = test_data.drop(['img'], axis=1)
