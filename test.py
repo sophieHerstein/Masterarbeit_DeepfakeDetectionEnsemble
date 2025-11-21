@@ -51,12 +51,12 @@ def evaluate_model(model_name, config,test_dir):
     loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     # Modell laden
-    if model_name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"]:
+    if model_name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         log_csv_path = os.path.join(
             "logs", "test", "ensemble",
             f"{model_name}_{test_dir}_details.csv"
         )
-        ensemble = Ensemble(weighted=(model_name == "ensemble"), meta=(model_name == "meta_classifier_ensemble"), log_csv_path=log_csv_path)
+        ensemble = Ensemble(weighted=(model_name == "ensemble" or model_name == "weighted_meta_classifier_ensemble"), meta=(model_name == "meta_classifier_ensemble" or model_name=="weighted_meta_classifier_ensemble"), log_csv_path=log_csv_path)
         model = ensemble
     else:
         model = get_model(model_name)
@@ -73,7 +73,7 @@ def evaluate_model(model_name, config,test_dir):
         pbar = tqdm(loader, desc=f"{model_name} - {test_dir}", unit="batch")
 
         for inputs, labels, paths in pbar:
-            if model_name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"]:
+            if model_name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
                 start_time = time.time()
 
                 for i, path in enumerate(paths):
@@ -152,9 +152,9 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"] + MODELS:
-    # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble"]:
-        name = "meta_classifier_ensemble"
+    # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"] + MODELS:
+    # for name in ["ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+        name = "weighted_meta_classifier_ensemble"
         for testdir in [
             "known_test_dir",
             "unknown_test_dir",

@@ -12,14 +12,19 @@ from utils.config import CONFIG
 import os
 import csv
 import pickle
+import pandas as pd
 
 class Ensemble:
 
     def __init__(self, weighted, meta, log_csv_path=None):
         self.weighted = weighted
         self.meta = meta
-        if self.meta:
-            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble.pkl")
+        if self.meta and self.weighted:
+            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_with_weights.pkl")
+            with open(ckpt_path, 'rb') as file:
+                self.meta_classifier = pickle.load(file)
+        elif self.meta:
+            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_no_weights.pkl")
             with open(ckpt_path, 'rb') as file:
                 self.meta_classifier = pickle.load(file)
         self.models = {
@@ -327,16 +332,33 @@ class Ensemble:
                 "frequency": quality_weights[1],
                 "grayscale": quality_weights[2],
             }
-        elif self.meta:
 
-            meta_features = np.array([[
-                probs["human"],
-                probs["landscape"],
-                probs["building"],
-                probs["edges"],
-                probs["frequency"],
-                probs["grayscale"]
-            ]])
+            if self.meta:
+                meta_features = pd.DataFrame([{
+                    "p_human": probs["human"],
+                    "p_landscape": probs["landscape"],
+                    "p_building": probs["building"],
+                    "p_edges": probs["edges"],
+                    "p_frequency": probs["frequency"],
+                    "p_grayscale": probs["grayscale"],
+                    "w_human": weights["human"],
+                    "w_landscape": weights["landscape"],
+                    "w_building": weights["building"],
+                    "w_edges": weights["edges"],
+                    "w_frequency": weights["frequency"],
+                    "w_grayscale": weights["grayscale"]
+                }])
+
+                predictions = self.meta_classifier.predict(meta_features)
+        elif self.meta:
+            meta_features = pd.DataFrame([{
+                "p_human": probs["human"],
+                "p_landscape": probs["landscape"],
+                "p_building": probs["building"],
+                "p_edges": probs["edges"],
+                "p_frequency": probs["frequency"],
+                "p_grayscale": probs["grayscale"]
+            }])
 
             predictions = self.meta_classifier.predict(meta_features)
         else:
