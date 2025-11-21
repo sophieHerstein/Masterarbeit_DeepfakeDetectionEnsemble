@@ -30,29 +30,16 @@ def load_training_log(model, train_type):
 
 
 def load_test_results(model):
-    path = f"logs/test_unshuffle/{model}_metrics.csv"
-    if os.path.exists(path):
-        return pd.read_csv(path)
-    return None
-
-def load_test_shuffle_results(model):
-    path = f"logs/test_shuffle/{model}_metrics.csv"
+    path = f"logs/test/{model}_metrics.csv"
     if os.path.exists(path):
         return pd.read_csv(path)
     return None
 
 def load_ensemble_results(model, test_dir):
-    path = f"logs/test_unshuffle/ensemble/{model}_{test_dir}_details_adapt.csv"
+    path = f"logs/test/ensemble/{model}_{test_dir}_details.csv"
     if os.path.exists(path):
         return pd.read_csv(path)
     return None
-
-def load_ensemble_shuffle_results(model, test_dir):
-    path = f"logs/test_shuffle/ensemble/{model}_{test_dir}_details.csv"
-    if os.path.exists(path):
-        return pd.read_csv(path)
-    return None
-
 
 def plot_line_chart(df, x, y, title):
     fig, ax = plt.subplots()
@@ -146,7 +133,7 @@ def compute_deltas(model):
 st.sidebar.title("Modellauswahl")
 
 models = MODELS
-model = st.sidebar.selectbox("Modell", [*models, "ensemble", "unweighted_ensemble"]) if models else None
+model = st.sidebar.selectbox("Modell", [*models, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]) if models else None
 
 train_types = TRAININGS_VARIANTEN
 test_types = TEST_VARIANTEN
@@ -240,7 +227,7 @@ with tab5:
 
     # === Daten sammeln ===
     data = []
-    for m in [*MODELS, "ensemble", "unweighted_ensemble"]:
+    for m in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         test_df = load_test_results(m)
         df = test_df.loc[test_df['TestVariante'] == test_type]
         if df.empty:

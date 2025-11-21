@@ -303,6 +303,8 @@ class Ensemble:
             "edges": self._is_deepfake_edges(img),
         }
 
+        prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
+
         weights = {k: None for k in probs.keys()}  # default None
         if self.weighted:
             category_weights = self._get_category_weights(img)
@@ -349,7 +351,12 @@ class Ensemble:
                     "w_grayscale": weights["grayscale"]
                 }])
 
-                predictions = self.meta_classifier.predict(meta_features)
+                meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+                meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+                meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+                meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+
+                pred = self.meta_classifier.predict_proba(meta_features)
         elif self.meta:
             meta_features = pd.DataFrame([{
                 "p_human": probs["human"],
@@ -360,7 +367,12 @@ class Ensemble:
                 "p_grayscale": probs["grayscale"]
             }])
 
-            predictions = self.meta_classifier.predict(meta_features)
+            meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+            meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+            meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+            meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+
+            pred = self.meta_classifier.predict_proba(meta_features)
         else:
             deepfake_prob_based_on_category = (
                                                       probs["edges"] + probs["frequency"] + probs["grayscale"]
@@ -372,12 +384,12 @@ class Ensemble:
 
 
         if self.meta:
-            prediction = int(predictions[0])
-            final_prob = int(predictions[0])
+            final_prob = pred[0][1]
         else:
             # Finale Wahrscheinlichkeit & Entscheidung
             final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
-            prediction = int(final_prob > 0.5)
+
+        prediction = int(final_prob > 0.5)
 
         if verbose:
             mode = "weighted" if self.weighted else "unweighted"

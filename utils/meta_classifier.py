@@ -1,6 +1,7 @@
 import csv
 import os
 
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -9,32 +10,26 @@ import pickle
 import shutil
 
 
-def test_for_best_classifier_train_data(test_size, all_table_keys):
-    dataset = pd.read_csv("../logs/test/ensemble_1/ensemble_known_test_dir_details.csv")
+def test_for_best_classifier_train_data(all_table_keys):
+    train_df = pd.read_csv("train_meta.csv")
 
-    dataset = dataset.drop(['prediction', 'final_prob'], axis=1)
     filename = "meta_classifier_best_train_params.csv"
     if not os.path.exists(filename):
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["test_size", "all_table_keys", "score", "params"])
-
-    train_df, test_df = train_test_split(
-        dataset,
-        test_size=test_size,
-        random_state=42,
-        stratify=dataset["label"]
-    )
-
-    train_df.to_csv(f"train_{test_size}_{all_table_keys}.csv", index=False)
-    test_df.to_csv(f"test_{test_size}_{all_table_keys}.csv", index=False)
+            writer.writerow(["model", "all_table_keys", "score", "params"])
 
     train_df = train_df.drop('img', axis=1)
-    test_df = test_df.drop('img', axis=1)
 
     if not all_table_keys:
         train_df = train_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        test_df = test_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+
+    prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
+
+    train_df["conf_max"] = train_df[prob_cols].max(axis=1)
+    train_df["conf_min"] = train_df[prob_cols].min(axis=1)
+    train_df["conf_mean"] = train_df[prob_cols].mean(axis=1)
+    train_df["conf_std"] = train_df[prob_cols].std(axis=1)
 
     X_train = train_df.drop(columns=['label'])
     y_train = train_df['label']
@@ -47,17 +42,46 @@ def test_for_best_classifier_train_data(test_size, all_table_keys):
         'class_weight': [None, 'balanced']
         }
 
+    rfc_parameter = {
+        'n_estimators': [50, 100, 200, 300],
+        'criterion': ['gini', 'entropy'],
+        'max_depth': [None, 10, 20, 30],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': [None, 1, 5, 10, 'sqrt', 'log2'],
+        'bootstrap': [True, False],
+        'oob_score': [True, False]
+    }
+
+    gbc_parameters = {
+        "n_estimators": [50, 100, 200],
+        "learning_rate": [0.01, 0.05, 0.1],
+        "max_depth": [1, 2, 3],
+        "min_samples_split": [2, 5, 10],
+        "min_samples_leaf": [1, 2, 4],
+        "subsample": [0.7, 0.9, 1.0]
+    }
+
     filtered_lg_parameters = create_lg_param_grid(lg_parameters)
+    filtered_rfc_parameters = create_rfc_param_grid(rfc_parameter)
+    filtered_gbc_parameters = create_gbc_param_grid(gbc_parameters)
 
-    kfold = KFold(n_splits=5)
-    grid_cv = GridSearchCV(estimator=LogisticRegression(), param_grid=filtered_lg_parameters, scoring='accuracy', cv=kfold)
-    result = grid_cv.fit(X_train, y_train)
+    model_list = [
+        ('RFC', RandomForestClassifier(random_state=1), filtered_rfc_parameters),
+        ('LR', LogisticRegression(random_state=1), filtered_lg_parameters),
+        ('GBC', GradientBoostingClassifier(random_state=1), filtered_gbc_parameters),
+    ]
 
-    print("Best {} using {}".format(result.best_score_, result.best_params_))
+    for name, model, parameters_for_testing in model_list:
+        kfold = KFold(n_splits=5)
+        grid_cv = GridSearchCV(estimator=model, param_grid=parameters_for_testing, scoring='accuracy', cv=kfold)
+        result = grid_cv.fit(X_train, y_train)
 
-    with open(filename, "a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([test_size, all_table_keys, result.best_score_, result.best_params_])
+        print("{}: Best {} using {}".format(name, result.best_score_, result.best_params_))
+
+        with open(filename, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([name, all_table_keys, result.best_score_, result.best_params_])
 
 
 def ensure_list(param_dict):
@@ -66,7 +90,6 @@ def ensure_list(param_dict):
             param_dict[key] = [param_dict[key]]
     return param_dict
 
-# Filterfunktion für Logistic Regression
 def create_lg_param_grid(params):
     param_grid = list(ParameterGrid(params))
     filtered_param_grid = []
@@ -77,6 +100,25 @@ def create_lg_param_grid(params):
             filtered_param_grid.append(ensure_list(param_combination))
     return filtered_param_grid
 
+def create_rfc_param_grid(params):
+    param_grid = list(ParameterGrid(params))
+    filtered_param_grid = []
+    for param_combination in param_grid:
+        if param_combination['oob_score'] == True and param_combination['bootstrap'] == False:
+            continue
+        filtered_param_grid.append(ensure_list(param_combination))
+    return filtered_param_grid
+
+def create_gbc_param_grid(params):
+    param_grid = list(ParameterGrid(params))
+    filtered = []
+    for p in param_grid:
+        # UNSINNIGE Kombinationen filtern:
+        # subsample < 1.0 ist NUR sinnvoll bei n_estimators > 50
+        if p["subsample"] < 1.0 and p["n_estimators"] < 100:
+            continue
+        filtered.append(ensure_list(p))
+    return filtered
 
 def use_data_from_test_for_train_and_train_model(all_table_keys):
     test_size = 0.7
@@ -136,7 +178,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
 
 
 def remove_train_images_from_test_for_ensemble_images():
-    csv_path = "train_0.7_False.csv"  # deine CSV
+    csv_path = "train_meta.csv"  # deine CSV
     df = pd.read_csv(csv_path)
 
     source_root = "../data/test/known_test"
@@ -164,11 +206,17 @@ def remove_train_images_from_test_for_ensemble_images():
 
     print("Fertig! Bilder wurden kopiert.")
 
+def test_meta_classifier():
+    lr_model = pickle.load(open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'rb'))
+    test_data = pd.read_csv("test_meta.csv")
+    test_data = test_data.drop(['img', 'label'], axis=1)
+    predictions = lr_model.predict_proba(test_data)
+    print(predictions[0][1])
 
 if __name__ == '__main__':
-    # for el in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-    #     test_for_best_classifier_train_data(el, False)
-    #     test_for_best_classifier_train_data(el, True)
-    use_data_from_test_for_train_and_train_model(True)
+    test_for_best_classifier_train_data(False)
+    test_for_best_classifier_train_data(True)
+    # use_data_from_test_for_train_and_train_model(True)
     # use_data_from_test_for_train_and_train_model(False)
     # remove_train_images_from_test_for_ensemble_images()
+    # test_meta_classifier()
