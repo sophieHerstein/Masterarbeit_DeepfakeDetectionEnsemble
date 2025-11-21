@@ -170,5 +170,5 @@ if __name__ == '__main__':
     #     test_for_best_classifier_train_data(el, False)
     #     test_for_best_classifier_train_data(el, True)
     use_data_from_test_for_train_and_train_model(True)
-    use_data_from_test_for_train_and_train_model(False)
+    # use_data_from_test_for_train_and_train_model(False)
     # remove_train_images_from_test_for_ensemble_images()
