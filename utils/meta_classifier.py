@@ -4,32 +4,33 @@ import os
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from sklearn.model_selection import train_test_split, ParameterGrid, KFold, GridSearchCV
 import pickle
 import shutil
 
 
-def test_for_best_classifier_train_data(all_table_keys):
+def test_for_best_classifier_train_data(all_table_keys, meta_values):
     train_df = pd.read_csv("train_meta.csv")
 
     filename = "meta_classifier_best_train_params.csv"
     if not os.path.exists(filename):
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["model", "all_table_keys", "score", "params"])
+            writer.writerow(["model", "all_table_keys", "meta_values", "score", "params"])
 
     train_df = train_df.drop('img', axis=1)
 
     if not all_table_keys:
         train_df = train_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
 
-    prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
+    if meta_values:
+        prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
 
-    train_df["conf_max"] = train_df[prob_cols].max(axis=1)
-    train_df["conf_min"] = train_df[prob_cols].min(axis=1)
-    train_df["conf_mean"] = train_df[prob_cols].mean(axis=1)
-    train_df["conf_std"] = train_df[prob_cols].std(axis=1)
+        train_df["conf_max"] = train_df[prob_cols].max(axis=1)
+        train_df["conf_min"] = train_df[prob_cols].min(axis=1)
+        train_df["conf_mean"] = train_df[prob_cols].mean(axis=1)
+        train_df["conf_std"] = train_df[prob_cols].std(axis=1)
 
     X_train = train_df.drop(columns=['label'])
     y_train = train_df['label']
@@ -81,7 +82,7 @@ def test_for_best_classifier_train_data(all_table_keys):
 
         with open(filename, "a", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([name, all_table_keys, result.best_score_, result.best_params_])
+            writer.writerow([name, all_table_keys, meta_values, result.best_score_, result.best_params_])
 
 
 def ensure_list(param_dict):
@@ -120,24 +121,32 @@ def create_gbc_param_grid(params):
         filtered.append(ensure_list(p))
     return filtered
 
-def use_data_from_test_for_train_and_train_model(all_table_keys):
+def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
     train_data = pd.read_csv(f"train_meta.csv")
     test_data = pd.read_csv(f"test_meta.csv")
+    unknwon_test_data = pd.read_csv(f"test_meta_unknown.csv")
 
     train_data = train_data.drop(['img'], axis=1)
     test_data = test_data.drop(['img'], axis=1)
+    unknwon_test_data = unknwon_test_data.drop(['img', 'prediction', 'final_prob'], axis=1)
 
     prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
 
-    train_data["conf_max"] = train_data[prob_cols].max(axis=1)
-    train_data["conf_min"] = train_data[prob_cols].min(axis=1)
-    train_data["conf_mean"] = train_data[prob_cols].mean(axis=1)
-    train_data["conf_std"] = train_data[prob_cols].std(axis=1)
+    if meta_values:
+        train_data["conf_max"] = train_data[prob_cols].max(axis=1)
+        train_data["conf_min"] = train_data[prob_cols].min(axis=1)
+        train_data["conf_mean"] = train_data[prob_cols].mean(axis=1)
+        train_data["conf_std"] = train_data[prob_cols].std(axis=1)
 
-    test_data["conf_max"] = test_data[prob_cols].max(axis=1)
-    test_data["conf_min"] = test_data[prob_cols].min(axis=1)
-    test_data["conf_mean"] = test_data[prob_cols].mean(axis=1)
-    test_data["conf_std"] = test_data[prob_cols].std(axis=1)
+        test_data["conf_max"] = test_data[prob_cols].max(axis=1)
+        test_data["conf_min"] = test_data[prob_cols].min(axis=1)
+        test_data["conf_mean"] = test_data[prob_cols].mean(axis=1)
+        test_data["conf_std"] = test_data[prob_cols].std(axis=1)
+
+        unknwon_test_data["conf_max"] = unknwon_test_data[prob_cols].max(axis=1)
+        unknwon_test_data["conf_min"] = unknwon_test_data[prob_cols].min(axis=1)
+        unknwon_test_data["conf_mean"] = unknwon_test_data[prob_cols].mean(axis=1)
+        unknwon_test_data["conf_std"] = unknwon_test_data[prob_cols].std(axis=1)
 
     if all_table_keys:
 
@@ -154,18 +163,29 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
         y_train = train_data['label']
         X_test = test_data.drop(columns=['label'])
         y_test = test_data['label']
+        X_unknown_test = unknwon_test_data.drop(columns=['label'])
+        y_unknown_test = unknwon_test_data['label']
 
         lr_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         lr_model.fit(X_train, y_train)
 
-        with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
-            pickle.dump(lr_model, file)
+        # with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
+        #     pickle.dump(lr_model, file)
 
         test_predictions = lr_model.predict(X_test)
 
         test_cm = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_)
 
-        print(test_cm)
+        print(f"Confusion Matrix for known test dir with all table keys and {'with' if meta_values else 'without'} meta values: \n{test_cm}")
+        print(classification_report(y_test, test_predictions))
+
+        unknown_test_predictions = lr_model.predict(X_unknown_test)
+
+        unknown_test_cm = confusion_matrix(y_unknown_test, unknown_test_predictions, labels=lr_model.classes_)
+
+        print(f"Confusion Matrix for unknown test dir with all table keys and {'with' if meta_values else 'without'} meta values:  \n{unknown_test_cm}")
+        print(classification_report(y_unknown_test, unknown_test_predictions))
+        print("--------------------------------------------------------------------------------------------------------------------------------------------------")
     else:
 
         bootstrap = True
@@ -181,23 +201,36 @@ def use_data_from_test_for_train_and_train_model(all_table_keys):
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
         test_data = test_data.drop(
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        unknwon_test_data = unknwon_test_data.drop(
+                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
 
         X_train = train_data.drop(columns=['label'])
         y_train = train_data['label']
         X_test = test_data.drop(columns=['label'])
         y_test = test_data['label']
+        X_unknown_test = unknwon_test_data.drop(columns=['label'])
+        y_unknown_test = unknwon_test_data['label']
 
         lr_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         lr_model.fit(X_train, y_train)
 
-        with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
-            pickle.dump(lr_model, file)
+        # with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
+        #     pickle.dump(lr_model, file)
 
         test_predictions = lr_model.predict(X_test)
 
         test_cm = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_)
 
-        print(test_cm)
+        print(f"Confusion Matrix for known test dir without all table keys and {'with' if meta_values else 'without'} meta values:  \n{test_cm}")
+        print(classification_report(y_test, test_predictions))
+
+        unknwon_test_predictions = lr_model.predict(X_unknown_test)
+
+        unknwon_test_cm = confusion_matrix(y_unknown_test, unknwon_test_predictions, labels=lr_model.classes_)
+
+        print(f"Confusion Matrix for unknown test dir without all table keys and {'with' if meta_values else 'without'} meta values: \n{unknwon_test_cm}")
+        print(classification_report(y_unknown_test, unknwon_test_predictions))
+        print("--------------------------------------------------------------------------------------------------------------------------------------------------")
 
 
 def remove_train_images_from_test_for_ensemble_images():
@@ -237,9 +270,13 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    # test_for_best_classifier_train_data(False)
-    # test_for_best_classifier_train_data(True)
-    use_data_from_test_for_train_and_train_model(True)
-    use_data_from_test_for_train_and_train_model(False)
+    # test_for_best_classifier_train_data(False, True)
+    # test_for_best_classifier_train_data(True, True)
+    test_for_best_classifier_train_data(False, False)
+    test_for_best_classifier_train_data(True, False)
+    # use_data_from_test_for_train_and_train_model(True, True)
+    # use_data_from_test_for_train_and_train_model(False, True)
+    # use_data_from_test_for_train_and_train_model(True, False)
+    # use_data_from_test_for_train_and_train_model(False, False)
     # remove_train_images_from_test_for_ensemble_images()
     # test_meta_classifier()
