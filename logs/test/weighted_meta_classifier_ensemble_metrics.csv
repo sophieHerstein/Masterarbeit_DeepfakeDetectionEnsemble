@@ -1,0 +1,9 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+weighted_meta_classifier_ensemble,known_test_dir,0.9873,0.9812,0.9937,0.9874,0.9995,626,618,12,4,0.783182
+weighted_meta_classifier_ensemble,unknown_test_dir,0.8078,0.7608,0.8978,0.8236,0.9271,808,646,254,92,0.801787
+weighted_meta_classifier_ensemble,known_test_jpeg_dir,0.9400,0.8992,0.9911,0.9429,0.9928,892,800,100,8,0.752220
+weighted_meta_classifier_ensemble,unknown_test_jpeg_dir,0.6489,0.5994,0.8978,0.7189,0.7407,808,360,540,92,0.778074
+weighted_meta_classifier_ensemble,known_test_noisy_dir,0.7883,0.9905,0.5822,0.7334,0.9683,524,895,5,376,0.692878
+weighted_meta_classifier_ensemble,unknown_test_noisy_dir,0.7050,0.8101,0.5356,0.6448,0.7807,482,787,113,418,0.791475
+weighted_meta_classifier_ensemble,known_test_scaled_dir,0.9433,0.9063,0.9889,0.9458,0.9903,890,808,92,10,0.753724
+weighted_meta_classifier_ensemble,unknown_test_scaled_dir,0.6222,0.5776,0.9100,0.7066,0.7120,819,301,599,81,0.788248
