@@ -22,7 +22,7 @@ def test_for_best_classifier_train_data(all_table_keys, meta_values):
             writer = csv.writer(f)
             writer.writerow(["model", "all_table_keys", "meta_values", "score", "params"])
 
-    train_df = train_df.drop('img', axis=1)
+    train_df = train_df.drop(['img', "img_norm", "img_id"], axis=1)
 
     if not all_table_keys:
         train_df = train_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
@@ -470,7 +470,7 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    get_train_images_for_robustheit()
+    # get_train_images_for_robustheit()
     test_for_best_classifier_train_data(False, True)
     test_for_best_classifier_train_data(True, True)
     test_for_best_classifier_train_data(False, False)
