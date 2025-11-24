@@ -121,24 +121,50 @@ def create_gbc_param_grid(params):
         filtered.append(ensure_list(p))
     return filtered
 
-def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
-    filename = "meta_classifier_test_oder_so.csv"
-    filename_unknown = "meta_classifier_unknown_test_oder_so.csv"
+def create_file(filename):
     if not os.path.exists(filename):
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["model", "all_table_keys", "meta_values", "tn", "fp", "fn", "tp", "accuracy", "precision", "recall", "f1"])
 
-    if not os.path.exists(filename_unknown):
-        with open(filename_unknown, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["model", "all_table_keys", "meta_values", "tn", "fp", "fn", "tp", "accuracy", "precision", "recall", "f1"])
+
+def test_model(model_name, model, X_test, y_test, filename, all_table_keys, meta_values):
+    test_predictions = model.predict(X_test)
+    tn, fp, fn, tp = confusion_matrix(y_test, test_predictions, labels=model.classes_).ravel().tolist()
+
+    report = classification_report(y_test, test_predictions, output_dict=True)
+
+    with open(filename, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([model_name, all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
+                         report.get("1").get("precision"), report.get("1").get("recall"),
+                         report.get("1").get("f1-score")])
+
+
+def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
+    filename = "meta_classifier_test.csv"
+    filename_unknown = "meta_classifier_unknown_test.csv"
+    filename_jpeg = "meta_classifier_jpeg_test.csv"
+    filename_noisy = "meta_classifier_noisy_test.csv"
+    filename_scaled = "meta_classifier_scaled_test.csv"
+
+    create_file(filename)
+    create_file(filename_unknown)
+    create_file(filename_jpeg)
+    create_file(filename_noisy)
+    create_file(filename_scaled)
 
     train_data = pd.read_csv(f"train_meta.csv")
     test_data = pd.read_csv(f"test_meta.csv")
     unknwon_test_data = pd.read_csv(f"test_meta_unknown.csv")
+    jpeg_test_data = pd.read_csv(f"test_meta_jpeg.csv")
+    noisy_test_data = pd.read_csv(f"test_meta_noisy.csv")
+    scaled_test_data = pd.read_csv(f"test_meta_scaled.csv")
 
-    train_data = train_data.drop(['img'], axis=1)
+    train_data = train_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    noisy_test_data = noisy_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    jpeg_test_data = jpeg_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    scaled_test_data = scaled_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
     test_data = test_data.drop(['img'], axis=1)
     unknwon_test_data = unknwon_test_data.drop(['img', 'prediction', 'final_prob'], axis=1)
 
@@ -160,12 +186,33 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         unknwon_test_data["conf_mean"] = unknwon_test_data[prob_cols].mean(axis=1)
         unknwon_test_data["conf_std"] = unknwon_test_data[prob_cols].std(axis=1)
 
+        noisy_test_data["conf_max"] = noisy_test_data[prob_cols].max(axis=1)
+        noisy_test_data["conf_min"] = noisy_test_data[prob_cols].min(axis=1)
+        noisy_test_data["conf_mean"] = noisy_test_data[prob_cols].mean(axis=1)
+        noisy_test_data["conf_std"] = noisy_test_data[prob_cols].std(axis=1)
+
+        jpeg_test_data["conf_max"] = jpeg_test_data[prob_cols].max(axis=1)
+        jpeg_test_data["conf_min"] = jpeg_test_data[prob_cols].min(axis=1)
+        jpeg_test_data["conf_mean"] = jpeg_test_data[prob_cols].mean(axis=1)
+        jpeg_test_data["conf_std"] = jpeg_test_data[prob_cols].std(axis=1)
+
+        scaled_test_data["conf_max"] = scaled_test_data[prob_cols].max(axis=1)
+        scaled_test_data["conf_min"] = scaled_test_data[prob_cols].min(axis=1)
+        scaled_test_data["conf_mean"] = scaled_test_data[prob_cols].mean(axis=1)
+        scaled_test_data["conf_std"] = scaled_test_data[prob_cols].std(axis=1)
+
     if not all_table_keys:
         train_data = train_data.drop(
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
         test_data = test_data.drop(
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
         unknwon_test_data = unknwon_test_data.drop(
+                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        noisy_test_data = noisy_test_data.drop(
+                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        jpeg_test_data = jpeg_test_data.drop(
+                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        scaled_test_data = scaled_test_data.drop(
                     ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
 
 
@@ -175,155 +222,92 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
     y_test = test_data['label']
     X_unknown_test = unknwon_test_data.drop(columns=['label'])
     y_unknown_test = unknwon_test_data['label']
+    X_noisy_test = noisy_test_data.drop(columns=['label'])
+    y_noisy_test = noisy_test_data['label']
+    X_scaled_test = scaled_test_data.drop(columns=['label'])
+    y_scaled_test = scaled_test_data['label']
+    X_jpeg_test = jpeg_test_data.drop(columns=['label'])
+    y_jpeg_test = jpeg_test_data['label']
 
     if all_table_keys and meta_values:
-        bootstrap = False
-        criterion = 'entropy'
-        max_depth = None
-        max_features = 1
-        min_samples_leaf = 2
-        min_samples_split = 5
-        n_estimators = 100
-        oob_score = False
+        learning_rate = 0.1
+        max_depth = 3
+        n_estimators = 200
+        subsample = 0.7
 
-        rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth,
-                                          max_features=max_features, min_samples_leaf=min_samples_leaf,
-                                          min_samples_split=min_samples_split, n_estimators=n_estimators,
-                                          oob_score=oob_score)
+        gbc_model = GradientBoostingClassifier(random_state=1, learning_rate=learning_rate, max_depth=max_depth, n_estimators=n_estimators, subsample=subsample)
+        gbc_model.fit(X_train, y_train)
+
+        with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
+            pickle.dump(gbc_model, file)
+
+        test_model("GBC", gbc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("GBC", gbc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
+        # test_model("GBC", gbc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
+        # test_model("GBC", gbc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
+        # test_model("GBC", gbc_model, X_noisy_test, y_noisy_test, filename_noisy, all_table_keys, meta_values)
+    elif all_table_keys:
+        bootstrap = True
+        max_depth = None
+        max_features = 'sqrt'
+        min_samples_leaf = 1
+        min_samples_split = 2
+        n_estimators = 300
+        oob_score = True
+
+        rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, n_estimators=n_estimators, max_features=max_features, max_depth=max_depth, min_samples_leaf=min_samples_leaf,min_samples_split=min_samples_split, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
         # with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
         #     pickle.dump(lr_model, file)
 
-        test_predictions = rfc_model.predict(X_test)
-        tn, fp, fn, tp  = confusion_matrix(y_test, test_predictions, labels=rfc_model.classes_).ravel().tolist()
-
-        report = classification_report(y_test, test_predictions, output_dict=True)
-
-        with open(filename, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["RFC", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"), report.get("1").get("precision"), report.get("1").get("recall"), report.get("1").get("f1-score")])
-
-
-        unknown_test_predictions = rfc_model.predict(X_unknown_test)
-        tn, fp, fn, tp = confusion_matrix(y_unknown_test, unknown_test_predictions, labels=rfc_model.classes_).ravel().tolist()
-
-        report = classification_report(y_unknown_test, unknown_test_predictions, output_dict=True)
-
-        with open(filename_unknown, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["RFC", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
-    elif all_table_keys:
-        c = 0.01
-        class_weight = None
-        max_iter = 100
-        penalty = None
-        solver = "newton-cg"
-
-        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter, penalty=penalty, solver=solver)
-        lr_model.fit(X_train, y_train)
-
-        # with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
-        #     pickle.dump(lr_model, file)
-
-        test_predictions = lr_model.predict(X_test)
-        tn, fp, fn, tp = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_).ravel().tolist()
-
-        report = classification_report(y_test, test_predictions, output_dict=True)
-
-        with open(filename, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["LR", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
-
-        unknown_test_predictions = lr_model.predict(X_unknown_test)
-        tn, fp, fn, tp = confusion_matrix(y_unknown_test, unknown_test_predictions, labels=lr_model.classes_).ravel().tolist()
-
-        report = classification_report(y_unknown_test, unknown_test_predictions, output_dict=True)
-
-        with open(filename_unknown, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["LR", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
+        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_noisy_test, y_noisy_test, filename_noisy, all_table_keys, meta_values)
     elif meta_values:
+
         bootstrap = True
-        criterion = 'gini'
-        max_depth = None
-        max_features = 1
-        min_samples_leaf = 2
-        min_samples_split = 5
-        n_estimators = 50
+        max_depth = 10
+        max_features = 'sqrt'
+        min_samples_leaf = 1
+        min_samples_split = 2
+        n_estimators = 100
         oob_score = True
 
-        rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, criterion=criterion, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
+        rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
+        rfc_model.fit(X_train, y_train)
+
+        with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
+            pickle.dump(rfc_model, file)
+
+        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_noisy_test, y_noisy_test, filename_noisy, all_table_keys, meta_values)
+    else:
+
+        bootstrap = True
+        max_depth = None
+        max_features = 'sqrt'
+        min_samples_leaf = 1
+        min_samples_split = 2
+        n_estimators = 300
+        oob_score = True
+
+        rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
         # with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
         #     pickle.dump(lr_model, file)
 
-        test_predictions = rfc_model.predict(X_test)
-
-        tn, fp, fn, tp = confusion_matrix(y_test, test_predictions, labels=rfc_model.classes_).ravel().tolist()
-
-        report = classification_report(y_test, test_predictions, output_dict=True)
-
-        with open(filename, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["RFC", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
-
-        unknwon_test_predictions = rfc_model.predict(X_unknown_test)
-        tn, fp, fn, tp = confusion_matrix(y_unknown_test, unknwon_test_predictions, labels=rfc_model.classes_).ravel().tolist()
-
-        report = classification_report(y_unknown_test, unknwon_test_predictions, output_dict=True)
-
-        with open(filename_unknown, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["RFC", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
-    else:
-        c = 0.01
-        class_weight = None
-        max_iter = 100
-        penalty = None
-        solver = "lbfgs"
-
-        lr_model = LogisticRegression(random_state=1, C=c, class_weight=class_weight, max_iter=max_iter,
-                                      penalty=penalty, solver=solver)
-        lr_model.fit(X_train, y_train)
-
-        # with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
-        #     pickle.dump(lr_model, file)
-
-        test_predictions = lr_model.predict(X_test)
-
-        tn, fp, fn, tp = confusion_matrix(y_test, test_predictions, labels=lr_model.classes_).ravel().tolist()
-
-        report = classification_report(y_test, test_predictions, output_dict=True)
-
-        with open(filename, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["LR", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
-
-        unknown_test_predictions = lr_model.predict(X_unknown_test)
-
-        tn, fp, fn, tp = confusion_matrix(y_unknown_test, unknown_test_predictions, labels=lr_model.classes_).ravel().tolist()
-
-        report = classification_report(y_unknown_test, unknown_test_predictions, output_dict=True)
-
-        with open(filename_unknown, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["LR", all_table_keys, meta_values, tn, fp, fn, tp, report.get("accuracy"),
-                             report.get("1").get("precision"), report.get("1").get("recall"),
-                             report.get("1").get("f1-score")])
+        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_noisy_test, y_noisy_test, filename_noisy, all_table_keys, meta_values)
 
 
 def remove_train_images_from_test_for_ensemble_images():
@@ -468,12 +452,12 @@ def test_meta_classifier():
 
 if __name__ == '__main__':
     # get_train_images_for_robustheit()
-    test_for_best_classifier_train_data(False, True)
-    test_for_best_classifier_train_data(True, True)
-    test_for_best_classifier_train_data(False, False)
-    test_for_best_classifier_train_data(True, False)
-    # use_data_from_test_for_train_and_train_model(True, True)
-    # use_data_from_test_for_train_and_train_model(False, True)
+    # test_for_best_classifier_train_data(False, True)
+    # test_for_best_classifier_train_data(True, True)
+    # test_for_best_classifier_train_data(False, False)
+    # test_for_best_classifier_train_data(True, False)
+    use_data_from_test_for_train_and_train_model(True, True)
+    use_data_from_test_for_train_and_train_model(False, True)
     # use_data_from_test_for_train_and_train_model(True, False)
     # use_data_from_test_for_train_and_train_model(False, False)
     # remove_train_images_from_test_for_ensemble_images()
