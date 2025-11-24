@@ -39,31 +39,28 @@ def test_for_best_classifier_train_data(all_table_keys, meta_values):
     y_train = train_df['label']
 
     lg_parameters = {
-        'C': [0.01, 0.1, 1, 10, 100],
-        'penalty': ['l2', None],
-        'solver': ['newton-cg', 'lbfgs', 'liblinear', 'saga'],
+        'C': [0.1, 1, 10],
+        'penalty': ['l2'],
+        'solver': ['newton-cg', 'lbfgs'],
         'max_iter': [100, 200, 300],
         'class_weight': [None, 'balanced']
         }
 
     rfc_parameter = {
-        'n_estimators': [50, 100, 200, 300],
-        'criterion': ['gini', 'entropy'],
-        'max_depth': [None, 10, 20, 30],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4],
-        'max_features': [None, 1, 5, 10, 'sqrt', 'log2'],
-        'bootstrap': [True, False],
-        'oob_score': [True, False]
+        'n_estimators': [100, 300],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5],
+        'min_samples_leaf': [1, 2],
+        'max_features': ['sqrt', 'log2'],
+        'bootstrap': [True],
+        'oob_score': [True]
     }
 
     gbc_parameters = {
-        "n_estimators": [50, 100, 200],
-        "learning_rate": [0.01, 0.05, 0.1],
-        "max_depth": [1, 2, 3],
-        "min_samples_split": [2, 5, 10],
-        "min_samples_leaf": [1, 2, 4],
-        "subsample": [0.7, 0.9, 1.0]
+        "n_estimators": [100, 200],
+        "learning_rate": [0.05, 0.1],
+        "max_depth": [2, 3],
+        "subsample": [0.7, 1.0]
     }
 
     filtered_lg_parameters = create_lg_param_grid(lg_parameters)
