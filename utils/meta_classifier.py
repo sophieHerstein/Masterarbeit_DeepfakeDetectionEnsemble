@@ -8,7 +8,10 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classifica
 from sklearn.model_selection import train_test_split, ParameterGrid, KFold, GridSearchCV
 import pickle
 import shutil
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent  # Pfad zu diesem Skript
+PROJECT_DIR = BASE_DIR.parent
 
 def test_for_best_classifier_train_data(all_table_keys, meta_values):
     train_df = pd.read_csv("train_meta.csv")
@@ -327,33 +330,137 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
 
 
 def remove_train_images_from_test_for_ensemble_images():
-    csv_path = "train_meta.csv"  # deine CSV
+    csv_path = "train_meta.csv"
     df = pd.read_csv(csv_path)
 
-    source_root = "../data/test/known_test"
     target_root = "../data/test/meta_classifier_train_data"
 
-    # CSV enthält z.B. eine Spalte "img" mit dem vollständigen Pfad
     for path in df["img"]:
-        # Name der Datei extrahieren
         filename = os.path.basename(path)
 
-        # Ordner (0_real oder 1_fake)
         label_dir = os.path.basename(os.path.dirname(path))
 
-        # Quellpfad
         src = "../"+path
 
-        # Zielpfad
         dst_dir = os.path.join(target_root, label_dir)
         os.makedirs(dst_dir, exist_ok=True)
 
         dst = os.path.join(dst_dir, filename)
 
-        # Kopieren
         shutil.move(src, dst)
 
     print("Fertig! Bilder wurden kopiert.")
+
+
+def normalize(path: str) -> str:
+    """Normalize path separators + lowercase."""
+    return path.replace("\\", "/").lower()
+
+
+VARIANTS = {"jpeg", "noisy", "scaled"}
+
+def extract_base_id(path: str) -> str:
+    path = normalize(path)
+    filename = Path(path).stem.lower()  # architecture_1750_noisy
+    parts = filename.split("_")
+
+    # Letzter Teil ist nur Varianten-Suffix?
+    if parts[-1] in VARIANTS:
+        return "_".join(parts[:-1])
+
+    # Sonst NICHT abschneiden!
+    return filename
+
+
+
+def get_relative_subpath(path: str) -> Path:
+    """
+    Gibt den Pfad relativ zu data/test/... zurück.
+    Normalisiert Backslashes und Case.
+    """
+    p = Path(normalize(path))
+    parts = p.parts
+    idx = parts.index("test") + 1  # alles nach 'test/'
+    return Path(*parts[idx:])
+
+
+# ---------------------------------------
+# Hauptlogik
+# ---------------------------------------
+
+def get_train_images_for_robustheit():
+
+    base = pd.read_csv("train_meta.csv")
+    base["img_norm"] = base["img"].apply(normalize)
+    base["img_id"] = base["img_norm"].apply(extract_base_id)
+
+    variants = ["jpeg", "noisy", "scaled"]
+
+    appended_rows = [base]  # Start mit Base
+
+    variant_dfs = {}  # später fürs Kopieren gebraucht
+
+    for var in variants:
+        df = pd.read_csv(f"../logs/test/ensemble/ensemble_known_test_{var}_dir_details.csv")
+
+        # Entferne unnötige Spalten
+        df = df.drop(["prediction", "final_prob"], axis=1)
+
+        df["img_norm"] = df["img"].apply(normalize)
+        df["img_id"] = df["img_norm"].apply(extract_base_id)
+
+        variant_dfs[var] = df  # speichern
+
+        # Match + Missing
+        matched = df[df["img_id"].isin(base["img_id"])]
+        missing = df[~df["img_id"].isin(base["img_id"])]
+
+        # Missing speichern
+        missing.to_csv(f"test_meta_{var}.csv", index=False)
+
+        appended_rows.append(matched)
+
+        print(f"[{var}] matched: {len(matched)}, missing: {len(missing)}")
+
+    # ---------------------------------------
+    # Neue Base schreiben
+    # ---------------------------------------
+    new_base = pd.concat(appended_rows, ignore_index=True)
+    new_base.to_csv("train_meta_merged.csv", index=False)
+
+    print("\nNeue Base-Gesamtgröße:", len(new_base))
+
+
+    # ---------------------------------------
+    # Bilder kopieren
+    # ---------------------------------------
+    TARGET_ROOT = Path("../data/test/meta_classifier_train_data")
+
+    for var in variants:
+        df = variant_dfs[var]
+
+        # Jetzt MATCH gegen die neue Base (wichtiger Fix!)
+        matched = df[df["img_id"].isin(new_base["img_id"])]
+
+        for img_path in matched["img"]:
+            src = PROJECT_DIR / normalize(img_path)
+
+            # Sicherstellen, dass die Datei existiert
+            if not src.exists():
+                print(f"⚠ WARNUNG: Datei existiert nicht: {src}")
+                continue
+
+            relative = get_relative_subpath(normalize(img_path))   # bleibt Variante erhalten!
+            dest = TARGET_ROOT / relative
+
+            os.makedirs(dest.parent, exist_ok=True)
+
+            shutil.move(src, dest)
+
+        print(f"[{var}] kopiert: {len(matched)} Bilder")
+
+    print("\nFERTIG ✓")
+
 
 def test_meta_classifier():
     lr_model = pickle.load(open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'rb'))
@@ -363,13 +470,14 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    # test_for_best_classifier_train_data(False, True)
-    # test_for_best_classifier_train_data(True, True)
-    # test_for_best_classifier_train_data(False, False)
-    # test_for_best_classifier_train_data(True, False)
-    use_data_from_test_for_train_and_train_model(True, True)
-    use_data_from_test_for_train_and_train_model(False, True)
-    use_data_from_test_for_train_and_train_model(True, False)
-    use_data_from_test_for_train_and_train_model(False, False)
+    get_train_images_for_robustheit()
+    test_for_best_classifier_train_data(False, True)
+    test_for_best_classifier_train_data(True, True)
+    test_for_best_classifier_train_data(False, False)
+    test_for_best_classifier_train_data(True, False)
+    # use_data_from_test_for_train_and_train_model(True, True)
+    # use_data_from_test_for_train_and_train_model(False, True)
+    # use_data_from_test_for_train_and_train_model(True, False)
+    # use_data_from_test_for_train_and_train_model(False, False)
     # remove_train_images_from_test_for_ensemble_images()
     # test_meta_classifier()
