@@ -68,14 +68,14 @@ def test_for_best_classifier_train_data(all_table_keys, meta_values):
     filtered_gbc_parameters = create_gbc_param_grid(gbc_parameters)
 
     model_list = [
-        ('RFC', RandomForestClassifier(random_state=1), filtered_rfc_parameters),
-        ('LR', LogisticRegression(random_state=1), filtered_lg_parameters),
-        ('GBC', GradientBoostingClassifier(random_state=1), filtered_gbc_parameters),
+        ('RFC', RandomForestClassifier(random_state=1, n_jobs=1), filtered_rfc_parameters),
+        ('LR', LogisticRegression(random_state=1, n_jobs=1), filtered_lg_parameters),
+        ('GBC', GradientBoostingClassifier(random_state=1, n_jobs=1), filtered_gbc_parameters),
     ]
 
     for name, model, parameters_for_testing in model_list:
         kfold = KFold(n_splits=5)
-        grid_cv = GridSearchCV(estimator=model, param_grid=parameters_for_testing, scoring='accuracy', cv=kfold)
+        grid_cv = GridSearchCV(estimator=model, param_grid=parameters_for_testing, scoring='accuracy', cv=kfold, n_jobs=-1, verbose=2)
         result = grid_cv.fit(X_train, y_train)
 
         print("{}: Best {} using {}".format(name, result.best_score_, result.best_params_))
