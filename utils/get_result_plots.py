@@ -141,115 +141,186 @@ def get_test_plots():
         plt.show()
         print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
 
-def plot_unknown_summary():
-    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster_compact")
-    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-    # Mapping der Varianten
-    VARIANT_MAP = {
-        "unknown_test_dir": "Normal",
-        "unknown_test_jpeg_dir": "JPEG",
-        "unknown_test_noisy_dir": "Noisy",
-        "unknown_test_scaled_dir": "Scaled"
-    }
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster")
+LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # Daten sammeln
-    models = []
-    results = {v: [] for v in VARIANT_MAP.values()}
+VAR_NORMAL_KNOWN = "known_test_dir"
+VAR_NORMAL_UNKNOWN = "unknown_test_dir"
+VAR_JPEG_KNOWN = "known_test_jpeg_dir"
+VAR_JPEG_UNKNOWN = "unknown_test_jpeg_dir"
+VAR_SCALED_KNOWN = "known_test_scaled_dir"
+VAR_SCALED_UNKNOWN = "unknown_test_scaled_dir"
+VAR_NOISY_KNOWN = "known_test_noisy_dir"
+VAR_NOISY_UNKNOWN = "unknown_test_noisy_dir"
 
-    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
-        file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
-        if not os.path.exists(file):
+ALL_MODELS = [
+    *MODELS,
+    "ensemble",
+    "unweighted_ensemble",
+    "meta_classifier_ensemble",
+    "weighted_meta_classifier_ensemble",
+]
+
+def load_acc(model, variante):
+    file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
+    if not os.path.exists(file):
+        return None
+    df = pd.read_csv(file)
+    df = df.loc[df["TestVariante"] == variante]
+    if df.empty:
+        return None
+    return df["Accuracy"].iloc[0]
+
+def plot_overlay_poster():
+    data = []
+
+    for m in ALL_MODELS:
+        nk = load_acc(m, VAR_NORMAL_KNOWN)
+        nu = load_acc(m, VAR_NORMAL_UNKNOWN)
+        jk = load_acc(m, VAR_JPEG_KNOWN)
+        ju = load_acc(m, VAR_JPEG_UNKNOWN)
+        sk = load_acc(m, VAR_SCALED_KNOWN)
+        su = load_acc(m, VAR_SCALED_UNKNOWN)
+        nok = load_acc(m, VAR_NOISY_KNOWN)
+        nou = load_acc(m, VAR_NOISY_UNKNOWN)
+
+        if None in [nk, nu, jk, ju, sk, su, nok, nou]:
             continue
 
-        df = pd.read_csv(file)
+        data.append({
+            "model": m,
+            "normal_known": nk,
+            "normal_unknown": nu,
+            "jpeg_known": jk,
+            "jpeg_unknown": ju,
+            "scaled_known": sk,
+            "scaled_unknown": su,
+            "noisy_known": nok,
+            "noisy_unknown": nou
+        })
 
-        # nur einmal pro Modell anhängen
-        models.append(model)
+    # Sortierung nach unknown normal (absteigend)
+    data = sorted(data, key=lambda x: x["normal_unknown"], reverse=True)
 
-        for key, label in VARIANT_MAP.items():
-            value = df.loc[df["TestVariante"] == key]
-            if value.empty:
-                results[label].append(np.nan)
-            else:
-                results[label].append(value["Accuracy"].iloc[0])
-
-    # Plot
+    models = [d["model"] for d in data]
     x = np.arange(len(models))
-    width = 0.18
+    width = 0.15
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    # Farben
+    known_color = "#FF4A70"
+    unknown_color = "#E40139"
+    known_jpeg_color = "#B6002E"
+    unknown_jpeg_color = "#FF7A95"
+    known_scaled_color = "#8C0024"
+    unknown_scaled_color = "#FF9DB2"
+    known_noisy_color = "#600019"
+    unknown_noisy_color = "#FFC4D0"
 
-    for i, (label, vals) in enumerate(results.items()):
-        ax.bar(x + i*width - 1.5*width, vals, width, label=label)
+    fig, ax = plt.subplots(figsize=(14, 7), dpi=300)
 
-    ax.set_title("Accuracy auf UNBEKANNTEM Datensatz — kompakt")
-    ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=45)
+    offset_normal = -1.5 * width
+    offset_jpeg = -0.5 * width
+    offset_scaled = 0.5 * width
+    offset_noisy = 1.5 * width
+
+    # === Normal ===
+    ax.bar(
+        x + offset_normal,
+        [d["normal_known"] for d in data],
+        width,
+        label="Known (normal)",
+        color=known_color
+    )
+    ax.bar(
+        x + offset_normal,
+        [d["normal_unknown"] for d in data],
+        width,
+        label="Unknown (normal)",
+        color=unknown_color
+    )
+
+    # === JPEG ===
+    ax.bar(
+        x + offset_jpeg,
+        [d["jpeg_known"] for d in data],
+        width,
+        label="Known (jpeg)",
+        color=known_jpeg_color
+    )
+    ax.bar(
+        x + offset_jpeg,
+        [d["jpeg_unknown"] for d in data],
+        width,
+        label="Unknown (jpeg)",
+        color=unknown_jpeg_color
+    )
+
+
+
+    # === SCALED ===
+    ax.bar(
+        x + offset_scaled,
+        [d["scaled_known"] for d in data],
+        width,
+        label="Known (scaled)",
+        color=known_scaled_color
+    )
+    ax.bar(
+        x + offset_scaled,
+        [d["scaled_unknown"] for d in data],
+        width,
+        label="Unknown (scaled)",
+        color=unknown_scaled_color
+    )
+
+
+
+    # === NOISY ===
+
+    ax.bar(
+        x + offset_noisy,
+        [d["noisy_known"] for d in data],
+        width,
+        label="Known (noisy)",
+        color=known_noisy_color
+    )
+    ax.bar(
+        x + offset_noisy,
+        [d["noisy_unknown"] for d in data],
+        width,
+        label="Unknown (noisy)",
+        color=unknown_noisy_color
+    )
+
+
+    # === Achsen & Layout ===
+    ax.set_title("Accuracy – Known vs. Unknown (Normal & Komprimiert)", fontsize=16)
     ax.set_ylabel("Accuracy")
-    ax.legend()
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=45, ha="right")
+    ax.set_ylim(0, 1.0)
+    ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+    ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+    ax.set_axisbelow(True)  # Linien hinter die Balken
+
+    ax.legend(ncol=2, fontsize=10, loc="lower right")
     plt.tight_layout()
 
-    output_path = os.path.join(OUTPUT_DIR, f"unknown_summary.png")
-    plt.savefig(output_path, dpi=300)
+    output = os.path.join(OUTPUT_DIR, "overlay_known_unknown.png")
+    plt.savefig(output, dpi=300)
     plt.show()
 
-    print("Plot gespeichert:", output_path)
-
-def plot_known_vs_unknown_single(variante="jpeg"):
-    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster_compact")
-    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    key_known = f"known_test_{variante}_dir"
-    key_unknown = f"unknown_test_{variante}_dir"
-
-    models = []
-    known_acc = []
-    unknown_acc = []
-
-    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
-        file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
-        if not os.path.exists(file):
-            continue
-
-        df = pd.read_csv(file)
-
-        models.append(model)
-
-        df_known = df.loc[df["TestVariante"] == key_known]
-        df_unknown = df.loc[df["TestVariante"] == key_unknown]
-
-        known_acc.append(df_known["Accuracy"].iloc[0] if not df_known.empty else np.nan)
-        unknown_acc.append(df_unknown["Accuracy"].iloc[0] if not df_unknown.empty else np.nan)
-
-    x = np.arange(len(models))
-    width = 0.35
-
-    fig, ax = plt.subplots(figsize=(8, 4))
-
-    ax.bar(x - width/2, known_acc, width, label="Bekannt")
-    ax.bar(x + width/2, unknown_acc, width, label="Unbekannt")
-
-    ax.set_title(f"Comparison Known vs Unknown — {variante.upper()}")
-    ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=45)
-    ax.set_ylabel("Accuracy")
-    ax.legend()
-    plt.tight_layout()
-
-    path = os.path.join(OUTPUT_DIR, f"known_vs_unknown_{variante}.png")
-    plt.savefig(path, dpi=300)
-    plt.show()
-    print("Plot gespeichert:", path)
-
-
+    print(f"Plot gespeichert unter: {output}")
 
 
 if __name__ == "__main__":
     # get_train_plots()
     # get_confusion_matrices()
     # get_test_plots()
-    plot_unknown_summary()
-    plot_known_vs_unknown_single()
+    plot_overlay_poster()
