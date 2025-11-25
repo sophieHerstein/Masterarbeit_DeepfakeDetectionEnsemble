@@ -68,7 +68,7 @@ def get_train_plots():
         print(f"✅ Plots gespeichert in {OUTPUT_DIR}")
 
 def get_confusion_matrices():
-    for model in [*MODELS, "ensemble", "unweighted_ensemble"]:
+    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         for testvariante in TEST_VARIANTEN:
             OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "confusion_matrices")
 
@@ -103,7 +103,7 @@ def get_test_plots():
         models = []
         accuracies, precisions, recalls, f1_scores, roc_aucs = [], [], [], [], []
 
-        for model in [*MODELS, "ensemble", "unweighted_ensemble"]:
+        for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
             file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
             df = pd.read_csv(file)
             df = df.loc[df['TestVariante'] == variante]
@@ -141,8 +141,115 @@ def get_test_plots():
         plt.show()
         print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
 
+def plot_unknown_summary():
+    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster_compact")
+    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # Mapping der Varianten
+    VARIANT_MAP = {
+        "unknown_test_dir": "Normal",
+        "unknown_test_jpeg_dir": "JPEG",
+        "unknown_test_noisy_dir": "Noisy",
+        "unknown_test_scaled_dir": "Scaled"
+    }
+
+    # Daten sammeln
+    models = []
+    results = {v: [] for v in VARIANT_MAP.values()}
+
+    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+        file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
+        if not os.path.exists(file):
+            continue
+
+        df = pd.read_csv(file)
+
+        # nur einmal pro Modell anhängen
+        models.append(model)
+
+        for key, label in VARIANT_MAP.items():
+            value = df.loc[df["TestVariante"] == key]
+            if value.empty:
+                results[label].append(np.nan)
+            else:
+                results[label].append(value["Accuracy"].iloc[0])
+
+    # Plot
+    x = np.arange(len(models))
+    width = 0.18
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    for i, (label, vals) in enumerate(results.items()):
+        ax.bar(x + i*width - 1.5*width, vals, width, label=label)
+
+    ax.set_title("Accuracy auf UNBEKANNTEM Datensatz — kompakt")
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=45)
+    ax.set_ylabel("Accuracy")
+    ax.legend()
+    plt.tight_layout()
+
+    output_path = os.path.join(OUTPUT_DIR, f"unknown_summary.png")
+    plt.savefig(output_path, dpi=300)
+    plt.show()
+
+    print("Plot gespeichert:", output_path)
+
+def plot_known_vs_unknown_single(variante="jpeg"):
+    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster_compact")
+    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    key_known = f"known_test_{variante}_dir"
+    key_unknown = f"unknown_test_{variante}_dir"
+
+    models = []
+    known_acc = []
+    unknown_acc = []
+
+    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+        file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
+        if not os.path.exists(file):
+            continue
+
+        df = pd.read_csv(file)
+
+        models.append(model)
+
+        df_known = df.loc[df["TestVariante"] == key_known]
+        df_unknown = df.loc[df["TestVariante"] == key_unknown]
+
+        known_acc.append(df_known["Accuracy"].iloc[0] if not df_known.empty else np.nan)
+        unknown_acc.append(df_unknown["Accuracy"].iloc[0] if not df_unknown.empty else np.nan)
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    ax.bar(x - width/2, known_acc, width, label="Bekannt")
+    ax.bar(x + width/2, unknown_acc, width, label="Unbekannt")
+
+    ax.set_title(f"Comparison Known vs Unknown — {variante.upper()}")
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=45)
+    ax.set_ylabel("Accuracy")
+    ax.legend()
+    plt.tight_layout()
+
+    path = os.path.join(OUTPUT_DIR, f"known_vs_unknown_{variante}.png")
+    plt.savefig(path, dpi=300)
+    plt.show()
+    print("Plot gespeichert:", path)
+
+
+
 
 if __name__ == "__main__":
-    get_train_plots()
-    get_confusion_matrices()
-    get_test_plots()
+    # get_train_plots()
+    # get_confusion_matrices()
+    # get_test_plots()
+    plot_unknown_summary()
+    plot_known_vs_unknown_single()
