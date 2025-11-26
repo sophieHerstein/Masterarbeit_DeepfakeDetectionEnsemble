@@ -68,7 +68,7 @@ def get_train_plots():
         print(f"✅ Plots gespeichert in {OUTPUT_DIR}")
 
 def get_confusion_matrices():
-    for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+    for model in [*MODELS, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         for testvariante in TEST_VARIANTEN:
             OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "confusion_matrices")
 
@@ -103,7 +103,7 @@ def get_test_plots():
         models = []
         accuracies, precisions, recalls, f1_scores, roc_aucs = [], [], [], [], []
 
-        for model in [*MODELS, "ensemble", "unweighted_ensemble", "meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+        for model in [*MODELS, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
             file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
             df = pd.read_csv(file)
             df = df.loc[df['TestVariante'] == variante]
@@ -161,9 +161,9 @@ VAR_NOISY_UNKNOWN = "unknown_test_noisy_dir"
 
 ALL_MODELS = [
     *MODELS,
-    "ensemble",
+    "weighted_ensemble",
     "unweighted_ensemble",
-    "meta_classifier_ensemble",
+    "unweighted_meta_classifier_ensemble",
     "weighted_meta_classifier_ensemble",
 ]
 
@@ -206,7 +206,7 @@ def plot_overlay_poster():
         })
 
     # Sortierung nach unknown normal (absteigend)
-    data = sorted(data, key=lambda x: x["normal_unknown"], reverse=True)
+    data = sorted(data, key=lambda x: x["normal_known"], reverse=True)
 
     models = [d["model"] for d in data]
     x = np.arange(len(models))
@@ -300,7 +300,7 @@ def plot_overlay_poster():
 
 
     # === Achsen & Layout ===
-    ax.set_title("Accuracy – Known vs. Unknown (Normal & Komprimiert)", fontsize=16)
+    ax.set_title("Accuracy – Known vs. Unknown (Normal & verändert)", fontsize=16)
     ax.set_ylabel("Accuracy")
     ax.set_xticks(x)
     ax.set_xticklabels(models, rotation=45, ha="right")

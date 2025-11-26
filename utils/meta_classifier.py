@@ -382,7 +382,7 @@ def get_train_images_for_robustheit():
     variant_dfs = {}  # später fürs Kopieren gebraucht
 
     for var in variants:
-        df = pd.read_csv(f"../logs/test/ensemble/ensemble_known_test_{var}_dir_details.csv")
+        df = pd.read_csv(f"../logs/test/ensemble/weighted_ensemble_known_test_{var}_dir_details.csv")
 
         # Entferne unnötige Spalten
         df = df.drop(["prediction", "final_prob"], axis=1)
