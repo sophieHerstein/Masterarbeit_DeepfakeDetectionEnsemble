@@ -280,7 +280,7 @@ with tab5:
 
 with tab6:
     st.header("🔍 Ensemble Analyse")
-    if model in ["weighted_ensemble", "unweighted_ensemble"]:
+    if model in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         test_type = st.selectbox("Testarten", test_types, key="testtypes_tab7") if test_types else None
 
         df = load_ensemble_results(model, test_type)
