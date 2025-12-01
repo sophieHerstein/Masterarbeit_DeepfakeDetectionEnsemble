@@ -92,8 +92,8 @@ CONFIG = {
     "known_test_scaled_dir": "data/test/known_test_scaled",
     "unknown_test_scaled_dir": "data/test/unknown_test_scaled",
 
-    "known_test_crop_occlusion": "data/test/known_test_crop_occlusion",
-    "unknown_test_crop_occlusion": "data/test/unknown_test_crop_occlusion",
+    "known_test_occlusion": "data/test/known_test_occlusion",
+    "unknown_test_occlusion": "data/test/unknown_test_occlusion",
     "known_test_insertion": "data/test/known_test_insertion",
     "unknown_test_insertion": "data/test/unknown_test_insertion",
     "known_test_format_png": "data/test/known_test_format_png",
