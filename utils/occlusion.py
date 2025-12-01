@@ -4,30 +4,12 @@ import numpy as np
 from tqdm import tqdm
 import random
 
-# -----------------------------
-# Bildveränderungen
-# -----------------------------
-
-def random_crop(img):
-    h, w, _ = img.shape
-    # Crop zwischen 80% und 95% der Größe
-    crop_ratio = np.random.uniform(0.80, 0.95)
-    new_h = int(h * crop_ratio)
-    new_w = int(w * crop_ratio)
-
-    y = np.random.randint(0, h - new_h)
-    x = np.random.randint(0, w - new_w)
-
-    cropped = img[y:y+new_h, x:x+new_w]
-    resized = cv2.resize(cropped, (w, h))  # zurück zur Originalgröße
-    return resized
-
 
 def random_occlusion(img):
     h, w, _ = img.shape
     # Rechteck zwischen 10% und 25% der Bildfläche
-    occ_w = np.random.randint(int(w*0.10), int(w*0.25))
-    occ_h = np.random.randint(int(h*0.10), int(h*0.25))
+    occ_w = np.random.randint(int(w*0.10), int(w*0.3))
+    occ_h = np.random.randint(int(h*0.10), int(h*0.3))
 
     x = np.random.randint(0, w - occ_w)
     y = np.random.randint(0, h - occ_h)
@@ -59,11 +41,8 @@ def process_folder(input_folder, output_folder):
         if img is None:
             continue
 
-        # 50/50 Zufall: Cropping oder Occlusion
-        if np.random.rand() < 0.5:
-            img = random_crop(img)
-        else:
-            img = random_occlusion(img)
+
+        img = random_occlusion(img)
 
         cv2.imwrite(out_path, img)
 
@@ -80,13 +59,13 @@ def process_testset(base_input, base_output):
 
 
 if __name__ == "__main__":
-    known_input = "data/test/known_test"
-    unknown_input = "data/test/unknown_test"
+    known_input = "../data/test/known_test"
+    unknown_input = "../data/test/unknown_test"
 
-    known_output = "known_test_crop_occlusion"
-    unknown_output = "unknown_test_crop_occlusion"
+    known_output = "../data/test/known_test_occlusion"
+    unknown_output = "../data/test/unknown_test_occlusion"
 
     process_testset(known_input, known_output)
     process_testset(unknown_input, unknown_output)
 
-    print("Cropping & Occlusion Testsets erzeugt!")
+    print("Occlusion Testsets erzeugt!")

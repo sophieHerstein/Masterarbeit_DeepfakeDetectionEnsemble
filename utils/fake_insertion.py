@@ -8,15 +8,16 @@ import numpy as np
 # ---------------------------------------------------------
 
 # Ordner für die Eingabe-Fake-Bilder
-INPUT_FAKE_DIR_KNOWN = "data/test/known_test/1_fake"
-INPUT_FAKE_DIR_UNKNOWN = "data/test/unknown_test/1_fake"
+INPUT_FAKE_DIR_KNOWN = "../data/test/known_test/1_fake"
+INPUT_FAKE_DIR_UNKNOWN = "../data/test/unknown_test/1_fake"
 
 # Hintergrundbilder
-BACKGROUND_DIR = "data/backgrounds"
+BACKGROUND_DIR_KNOWN = "../data/backgrounds/known"
+BACKGROUND_DIR_UNKNOWN = "../data/backgrounds/unknown"
 
 # Ausgabeordner
-OUTPUT_KNOWN = "data/test/known_test_insertion/1_fake"
-OUTPUT_UNKNOWN = "data/test/unknown_test_insertion/1_fake"
+OUTPUT_KNOWN = "../data/test/known_test_insertion/1_fake"
+OUTPUT_UNKNOWN = "../data/test/unknown_test_insertion/1_fake"
 
 
 # ---------------------------------------------------------
@@ -78,6 +79,14 @@ def insert_face_into_background(fake_face, background):
     background[y:y + h_f, x:x + w_f] = blended
 
     return background
+
+
+def contains_face(image, detector):
+    """Prüft, ob ein Gesicht im Bild erkannt wird."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    faces = detector.detectMultiScale(gray, 1.3, 5)
+
+    return len(faces) > 0
 
 
 def run_insertion(input_dir, bg_dir, output_dir):
@@ -142,8 +151,8 @@ def run_insertion(input_dir, bg_dir, output_dir):
 def main():
     print("=== Fake Insertion Test läuft ===\n")
 
-    run_insertion(INPUT_FAKE_DIR_KNOWN, BACKGROUND_DIR, OUTPUT_KNOWN)
-    run_insertion(INPUT_FAKE_DIR_UNKNOWN, BACKGROUND_DIR, OUTPUT_UNKNOWN)
+    run_insertion(INPUT_FAKE_DIR_KNOWN, BACKGROUND_DIR_KNOWN, OUTPUT_KNOWN)
+    run_insertion(INPUT_FAKE_DIR_UNKNOWN, BACKGROUND_DIR_UNKNOWN, OUTPUT_UNKNOWN)
 
     print("=== Alle Insertion-Tests abgeschlossen ===")
 

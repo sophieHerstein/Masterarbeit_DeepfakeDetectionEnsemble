@@ -67,12 +67,12 @@ def process_testset(base_input, base_output):
 
 if __name__ == "__main__":
     # Original Ordner
-    known_input = "data/test/known_test"
-    unknown_input = "data/test/unknown_test"
+    known_input = "../data/test/known_test"
+    unknown_input = "../data/test/unknown_test"
 
     # Zielordner
-    known_output = "known_test_histogram"
-    unknown_output = "unknown_test_histogram"
+    known_output = "../data/test/known_test_histogram"
+    unknown_output = "../data/test/unknown_test_histogram"
 
     process_testset(known_input, known_output)
     process_testset(unknown_input, unknown_output)

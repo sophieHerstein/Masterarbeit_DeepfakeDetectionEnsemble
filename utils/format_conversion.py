@@ -11,12 +11,6 @@ def save_as_format(img, path, fmt):
     if fmt == "png":
         cv2.imwrite(path + ".png", img, [cv2.IMWRITE_PNG_COMPRESSION, 3])
 
-    elif fmt == "jpg90":
-        cv2.imwrite(path + ".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 90])
-
-    elif fmt == "jpg60":
-        cv2.imwrite(path + ".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 60])
-
     elif fmt == "webp":
         cv2.imwrite(path + ".webp", img, [cv2.IMWRITE_WEBP_QUALITY, 90])
 
@@ -58,15 +52,15 @@ def process_testset(base_input, base_output, fmt):
 
 if __name__ == "__main__":
     # Ursprungsordner
-    known_input = "data/test/known_test"
-    unknown_input = "data/test/unknown_test"
+    known_input = "../data/test/known_test"
+    unknown_input = "../data/test/unknown_test"
 
     # Formate, die erzeugt werden sollen
-    formats = ["png", "jpg90", "jpg60", "webp"]
+    formats = ["png", "webp"]
 
     for fmt in formats:
-        known_output = f"known_test_format_{fmt}"
-        unknown_output = f"unknown_test_format_{fmt}"
+        known_output = f"../data/test/known_test_format_{fmt}"
+        unknown_output = f"../data/test/unknown_test_format_{fmt}"
 
         print(f"Erzeuge {fmt} für KNOWN-Testset…")
         process_testset(known_input, known_output, fmt)
