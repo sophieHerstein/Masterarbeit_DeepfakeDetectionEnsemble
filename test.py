@@ -152,18 +152,18 @@ def evaluate_model(model_name, config,test_dir):
 
 
 if __name__ == "__main__":
-    # for name in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"] + MODELS:
+    for name in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"] + MODELS:
     # for name in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
-    for name in ["unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+    # for name in ["unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
         for testdir in [
-            "known_test_dir",
-            "unknown_test_dir",
-            "known_test_jpeg_dir",
-            "unknown_test_jpeg_dir",
-            "known_test_noisy_dir",
-            "unknown_test_noisy_dir",
-            "known_test_scaled_dir",
-            "unknown_test_scaled_dir"
+            # "known_test_dir",
+            # "unknown_test_dir",
+            # "known_test_jpeg_dir",
+            # "unknown_test_jpeg_dir",
+            # "known_test_noisy_dir",
+            # "unknown_test_noisy_dir",
+            # "known_test_scaled_dir",
+            # "unknown_test_scaled_dir"
         ]:
             evaluate_model(name, CONFIG, testdir)
 
