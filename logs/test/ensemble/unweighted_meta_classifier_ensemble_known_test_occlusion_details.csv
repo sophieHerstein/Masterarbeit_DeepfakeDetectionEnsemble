@@ -1,0 +1,2 @@
+img,label,prediction,final_prob,p_human,p_landscape,p_building,p_edges,p_frequency,p_grayscale,w_human,w_landscape,w_building,w_edges,w_frequency,w_grayscale
+data/test/known_test_occlusion\1_fake\human_manipulated_stable_diffusion_15_imag2img_portrait-in-park-afternoon-sun_372271798.jpg,1,1,0.9795,0.9998,0.9822,0.9945,0.9999,0.9113,0.9997,,,,,,
