@@ -11,7 +11,7 @@ import time
 from tqdm import tqdm
 
 from utils.ensemble.model_loader import get_model
-from utils.config import CONFIG, MODELS
+from utils.config import CONFIG, MODELS, TEST_VARIANTEN
 from ensemble import Ensemble
 
 class ImageFolderWithPaths(datasets.ImageFolder):
@@ -153,27 +153,6 @@ def evaluate_model(model_name, config,test_dir):
 
 if __name__ == "__main__":
     for name in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"] + MODELS:
-    # for name in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
-    # for name in ["unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
-        for testdir in [
-            # "known_test_dir",
-            # "unknown_test_dir",
-            # "known_test_jpeg_dir",
-            # "unknown_test_jpeg_dir",
-            # "known_test_noisy_dir",
-            # "unknown_test_noisy_dir",
-            # "known_test_scaled_dir",
-            # "unknown_test_scaled_dir",
-            "known_test_occlusion",
-            "unknown_test_occlusion",
-            "known_test_insertion",
-            "unknown_test_insertion",
-            "known_test_format_png",
-            "unknown_test_format_png",
-            "known_test_format_webp",
-            "unknown_test_format_webp",
-            "known_test_histogram",
-            "unknown_test_histogram"
-        ]:
+        for testdir in TEST_VARIANTEN:
             evaluate_model(name, CONFIG, testdir)
 

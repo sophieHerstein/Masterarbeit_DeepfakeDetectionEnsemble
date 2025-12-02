@@ -7,3 +7,13 @@ tf_efficientnet_b3,known_test_noisy_dir,0.7567,0.8799,0.5944,0.7095,0.8637,535,8
 tf_efficientnet_b3,unknown_test_noisy_dir,0.6383,0.6329,0.6589,0.6456,0.6992,593,556,344,307,0.000229
 tf_efficientnet_b3,known_test_scaled_dir,0.9067,0.8927,0.9244,0.9083,0.9653,832,800,100,68,0.000226
 tf_efficientnet_b3,unknown_test_scaled_dir,0.6528,0.6122,0.8333,0.7059,0.7529,750,425,475,150,0.000228
+tf_efficientnet_b3,known_test_occlusion,0.9214,0.9155,0.9286,0.9220,0.9782,585,576,54,45,0.001301
+tf_efficientnet_b3,unknown_test_occlusion,0.7094,0.6641,0.8478,0.7448,0.7934,763,514,386,137,0.000487
+tf_efficientnet_b3,known_test_insertion,0.8361,0.0000,0.0000,0.0000,nan,0,153,30,0,0.002778
+tf_efficientnet_b3,unknown_test_insertion,0.6000,0.0000,0.0000,0.0000,nan,0,168,112,0,0.002065
+tf_efficientnet_b3,known_test_format_png,0.9381,0.9272,0.9508,0.9389,0.9819,599,583,47,31,0.000215
+tf_efficientnet_b3,unknown_test_format_png,0.7244,0.6753,0.8644,0.7583,0.8095,778,526,374,122,0.000221
+tf_efficientnet_b3,known_test_format_webp,0.9254,0.9000,0.9571,0.9277,0.9792,603,563,67,27,0.000215
+tf_efficientnet_b3,unknown_test_format_webp,0.6917,0.6349,0.9022,0.7453,0.7938,812,433,467,88,0.000227
+tf_efficientnet_b3,known_test_histogram,0.9222,0.9118,0.9349,0.9232,0.9774,589,573,57,41,0.000218
+tf_efficientnet_b3,unknown_test_histogram,0.6989,0.6470,0.8756,0.7441,0.7929,788,470,430,112,0.000215

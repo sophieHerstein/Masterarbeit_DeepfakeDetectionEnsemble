@@ -7,3 +7,13 @@ weighted_meta_classifier_ensemble,known_test_noisy_dir,0.9476,0.9780,0.9159,0.94
 weighted_meta_classifier_ensemble,unknown_test_noisy_dir,0.6761,0.6546,0.7456,0.6971,0.7119,671,546,354,229,0.656246
 weighted_meta_classifier_ensemble,known_test_scaled_dir,0.9587,0.9446,0.9746,0.9594,0.9899,614,594,36,16,0.580802
 weighted_meta_classifier_ensemble,unknown_test_scaled_dir,0.6494,0.6067,0.8500,0.7080,0.7312,765,404,496,135,0.540717
+weighted_meta_classifier_ensemble,known_test_occlusion,0.9841,0.9904,0.9778,0.9840,0.9983,616,624,6,14,0.772633
+weighted_meta_classifier_ensemble,unknown_test_occlusion,0.8317,0.8313,0.8322,0.8318,0.9038,749,748,152,151,0.794968
+weighted_meta_classifier_ensemble,known_test_insertion,0.9727,0.0000,0.0000,0.0000,nan,0,178,5,0,0.803950
+weighted_meta_classifier_ensemble,unknown_test_insertion,0.7321,0.0000,0.0000,0.0000,nan,0,205,75,0,0.769828
+weighted_meta_classifier_ensemble,known_test_format_png,0.9873,0.9936,0.9810,0.9872,0.9984,618,626,4,12,0.816446
+weighted_meta_classifier_ensemble,unknown_test_format_png,0.8378,0.8248,0.8578,0.8410,0.9105,772,736,164,128,0.868792
+weighted_meta_classifier_ensemble,known_test_format_webp,0.9817,0.9856,0.9778,0.9817,0.9981,616,621,9,14,0.816575
+weighted_meta_classifier_ensemble,unknown_test_format_webp,0.7833,0.7429,0.8667,0.8000,0.8562,780,630,270,120,0.725370
+weighted_meta_classifier_ensemble,known_test_histogram,0.9810,0.9840,0.9778,0.9809,0.9980,616,620,10,14,0.601224
+weighted_meta_classifier_ensemble,unknown_test_histogram,0.8089,0.7769,0.8667,0.8193,0.9048,780,676,224,120,0.794833

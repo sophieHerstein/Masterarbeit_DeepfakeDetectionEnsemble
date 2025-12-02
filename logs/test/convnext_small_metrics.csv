@@ -7,3 +7,13 @@ convnext_small,known_test_noisy_dir,0.7511,0.9728,0.5167,0.6749,0.9161,465,887,1
 convnext_small,unknown_test_noisy_dir,0.6794,0.7618,0.5222,0.6196,0.7555,470,753,147,430,0.000184
 convnext_small,known_test_scaled_dir,0.8972,0.8307,0.9978,0.9066,0.9897,898,717,183,2,0.000177
 convnext_small,unknown_test_scaled_dir,0.6411,0.5871,0.9511,0.7260,0.7736,856,298,602,44,0.000179
+convnext_small,known_test_occlusion,0.9794,0.9675,0.9921,0.9796,0.9985,625,609,21,5,0.001064
+convnext_small,unknown_test_occlusion,0.7689,0.7007,0.9389,0.8025,0.8621,845,539,361,55,0.000383
+convnext_small,known_test_insertion,0.9454,0.0000,0.0000,0.0000,nan,0,173,10,0,0.002800
+convnext_small,unknown_test_insertion,0.5821,0.0000,0.0000,0.0000,nan,0,163,117,0,0.001939
+convnext_small,known_test_format_png,0.9833,0.9721,0.9952,0.9835,0.9984,627,612,18,3,0.000176
+convnext_small,unknown_test_format_png,0.7744,0.7055,0.9422,0.8069,0.8544,848,546,354,52,0.000179
+convnext_small,known_test_format_webp,0.9754,0.9687,0.9825,0.9756,0.9956,619,610,20,11,0.000175
+convnext_small,unknown_test_format_webp,0.7356,0.6685,0.9344,0.7794,0.8352,841,483,417,59,0.000179
+convnext_small,known_test_histogram,0.9738,0.9701,0.9778,0.9739,0.9958,616,611,19,14,0.000172
+convnext_small,unknown_test_histogram,0.7428,0.6841,0.9022,0.7782,0.8267,812,525,375,88,0.000173

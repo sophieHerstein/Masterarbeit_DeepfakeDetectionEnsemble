@@ -38,7 +38,17 @@ TEST_VARIANTEN = [
     "known_test_noisy_dir",
     "unknown_test_noisy_dir",
     "known_test_scaled_dir",
-    "unknown_test_scaled_dir"
+    "unknown_test_scaled_dir",
+    "known_test_occlusion",
+    "unknown_test_occlusion",
+    "known_test_insertion",
+    "unknown_test_insertion",
+    "known_test_format_png",
+    "unknown_test_format_png",
+    "known_test_format_webp",
+    "unknown_test_format_webp",
+    "known_test_histogram",
+    "unknown_test_histogram"
 ]
 
 # enthält Pfade und andere Parameter usw.
