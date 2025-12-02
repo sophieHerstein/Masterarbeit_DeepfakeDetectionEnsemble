@@ -6,7 +6,7 @@ from scipy.special import expit
 import cv2
 from torchvision import transforms
 import torch
-from utils.model_loader import get_model
+from utils.ensemble.model_loader import get_model
 from classifier import MiniCNN
 from utils.config import CONFIG
 import os

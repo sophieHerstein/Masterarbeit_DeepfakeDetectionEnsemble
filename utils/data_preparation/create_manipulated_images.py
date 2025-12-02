@@ -109,7 +109,6 @@ def make_generator():
     return g, seed
 
 def _disable_safety_checker(pipe):
-    # Behalte API-Signatur bei: gibt (images, [False]*N) zurück
     def dummy_checker(images, clip_input):
         return images, [False] * len(images)
     pipe.safety_checker = dummy_checker

@@ -10,7 +10,7 @@ import csv
 import time
 from tqdm import tqdm
 
-from utils.model_loader import get_model
+from utils.ensemble.model_loader import get_model
 from utils.config import CONFIG, MODELS
 from ensemble import Ensemble
 

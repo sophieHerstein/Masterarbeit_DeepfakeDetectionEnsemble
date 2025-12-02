@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
-from utils.model_loader import get_model
+from utils.ensemble.model_loader import get_model
 from utils.config import CONFIG, TRAININGS_VARIANTEN, MODELS, PREPROCESS_METHODS
 import os
 import time

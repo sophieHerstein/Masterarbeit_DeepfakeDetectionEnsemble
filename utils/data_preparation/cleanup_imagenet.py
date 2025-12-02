@@ -2,7 +2,6 @@ import os
 import shutil
 
 def cleanup_imagenet(root_dir, keep_ids):
-    # Sicherheitscheck
     if not os.path.isdir(root_dir):
         raise ValueError(f"{root_dir} ist kein gültiger Ordner")
 
@@ -13,10 +12,10 @@ def cleanup_imagenet(root_dir, keep_ids):
         folder_path = os.path.join(root_dir, folder)
 
         if not os.path.isdir(folder_path):
-            continue  # nur Ordner anschauen
+            continue
 
         if folder not in keep_ids:
-            shutil.rmtree(folder_path)  # Ordner + Inhalt löschen
+            shutil.rmtree(folder_path)
             removed.append(folder)
         else:
             kept.append(folder)

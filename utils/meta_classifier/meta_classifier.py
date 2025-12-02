@@ -14,9 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent  # Pfad zu diesem Skript
 PROJECT_DIR = BASE_DIR.parent
 
 def test_for_best_classifier_train_data(all_table_keys, meta_values):
-    train_df = pd.read_csv("train_meta.csv")
+    train_df = pd.read_csv("../../logs/meta_classifier/train_meta.csv")
 
-    filename = "meta_classifier_best_train_params.csv"
+    filename = "../../logs/meta_classifier/meta_classifier_best_train_params.csv"
     if not os.path.exists(filename):
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
@@ -142,11 +142,11 @@ def test_model(model_name, model, X_test, y_test, filename, all_table_keys, meta
 
 
 def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
-    filename = "meta_classifier_test.csv"
-    filename_unknown = "meta_classifier_unknown_test.csv"
-    filename_jpeg = "meta_classifier_jpeg_test.csv"
-    filename_noisy = "meta_classifier_noisy_test.csv"
-    filename_scaled = "meta_classifier_scaled_test.csv"
+    filename = "../../logs/meta_classifier/test_results/meta_classifier_test.csv"
+    filename_unknown = "../../logs/meta_classifier/test_results/meta_classifier_unknown_test.csv"
+    filename_jpeg = "../../logs/meta_classifier/test_results/meta_classifier_jpeg_test.csv"
+    filename_noisy = "../../logs/meta_classifier/test_results/meta_classifier_noisy_test.csv"
+    filename_scaled = "../../logs/meta_classifier/test_results/meta_classifier_scaled_test.csv"
 
     create_file(filename)
     create_file(filename_unknown)
@@ -154,12 +154,12 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
     create_file(filename_noisy)
     create_file(filename_scaled)
 
-    train_data = pd.read_csv(f"train_meta.csv")
-    test_data = pd.read_csv(f"test_meta.csv")
-    unknwon_test_data = pd.read_csv(f"test_meta_unknown.csv")
-    jpeg_test_data = pd.read_csv(f"test_meta_jpeg.csv")
-    noisy_test_data = pd.read_csv(f"test_meta_noisy.csv")
-    scaled_test_data = pd.read_csv(f"test_meta_scaled.csv")
+    train_data = pd.read_csv(f"../../logs/meta_classifier/train_meta.csv")
+    test_data = pd.read_csv(f"../../logs/meta_classifier/test_data/test_meta.csv")
+    unknwon_test_data = pd.read_csv(f"../test_meta_unknown.csv")
+    jpeg_test_data = pd.read_csv(f"../test_meta_jpeg.csv")
+    noisy_test_data = pd.read_csv(f"../test_meta_noisy.csv")
+    scaled_test_data = pd.read_csv(f"../test_meta_scaled.csv")
 
     train_data = train_data.drop(['img', 'img_norm', 'img_id'], axis=1)
     noisy_test_data = noisy_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
@@ -238,7 +238,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         gbc_model = GradientBoostingClassifier(random_state=1, learning_rate=learning_rate, max_depth=max_depth, n_estimators=n_estimators, subsample=subsample)
         gbc_model.fit(X_train, y_train)
 
-        with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
+        with open('../../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
             pickle.dump(gbc_model, file)
 
         test_model("GBC", gbc_model, X_test, y_test, filename, all_table_keys, meta_values)
@@ -311,7 +311,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
 
 
 def remove_train_images_from_test_for_ensemble_images():
-    csv_path = "train_meta.csv"
+    csv_path = "../../logs/meta_classifier/train_meta.csv"
     df = pd.read_csv(csv_path)
 
     target_root = "../data/test/meta_classifier_train_data"
@@ -371,7 +371,7 @@ def get_relative_subpath(path: str) -> Path:
 
 def get_train_images_for_robustheit():
 
-    base = pd.read_csv("train_meta.csv")
+    base = pd.read_csv("../../logs/meta_classifier/train_meta.csv")
     base["img_norm"] = base["img"].apply(normalize)
     base["img_id"] = base["img_norm"].apply(extract_base_id)
 
@@ -444,21 +444,21 @@ def get_train_images_for_robustheit():
 
 
 def test_meta_classifier():
-    lr_model = pickle.load(open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'rb'))
-    test_data = pd.read_csv("test_meta.csv")
+    lr_model = pickle.load(open('../../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'rb'))
+    test_data = pd.read_csv("../../logs/meta_classifier/test_data/test_meta.csv")
     test_data = test_data.drop(['img', 'label'], axis=1)
     predictions = lr_model.predict_proba(test_data)
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    # get_train_images_for_robustheit()
-    # test_for_best_classifier_train_data(False, True)
-    # test_for_best_classifier_train_data(True, True)
-    # test_for_best_classifier_train_data(False, False)
-    # test_for_best_classifier_train_data(True, False)
+    get_train_images_for_robustheit()
+    test_for_best_classifier_train_data(False, True)
+    test_for_best_classifier_train_data(True, True)
+    test_for_best_classifier_train_data(False, False)
+    test_for_best_classifier_train_data(True, False)
     use_data_from_test_for_train_and_train_model(True, True)
     use_data_from_test_for_train_and_train_model(False, True)
-    # use_data_from_test_for_train_and_train_model(True, False)
-    # use_data_from_test_for_train_and_train_model(False, False)
-    # remove_train_images_from_test_for_ensemble_images()
-    # test_meta_classifier()
+    use_data_from_test_for_train_and_train_model(True, False)
+    use_data_from_test_for_train_and_train_model(False, False)
+    remove_train_images_from_test_for_ensemble_images()
+    test_meta_classifier()
