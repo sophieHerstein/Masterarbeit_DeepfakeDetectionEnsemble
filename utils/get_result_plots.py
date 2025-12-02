@@ -99,6 +99,8 @@ def get_test_plots():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     for variante in TEST_VARIANTEN:
+        if variante not in ["known_test_insertion", "unknown_test_insertion"]:
+            continue
         # === Daten sammeln ===
         data = []
         for model in [*MODELS, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
@@ -107,52 +109,85 @@ def get_test_plots():
             df = df.loc[df['TestVariante'] == variante]
             if df.empty:
                 continue
+            print(df.head())
             data.append({
                 "Model": model,
                 "Accuracy": df["Accuracy"].iloc[0],
                 "Precision": df["Precision"].iloc[0],
                 "Recall": df["Recall"].iloc[0],
                 "F1-Score": df["F1-Score"].iloc[0],
-                "ROC-AUC": df["ROC-AUC"].iloc[0]
+                "ROC-AUC": df["ROC-AUC"].iloc[0],
+                "TP": df["TP"].iloc[0]
             })
 
-        data = sorted(data, key=lambda x: x["Accuracy"], reverse=True)
+        if variante in ["known_test_insertion", "unknown_test_insertion"]:
+            data = sorted(data, key=lambda x: x["TP"], reverse=True)
+        else:
+            data = sorted(data, key=lambda x: x["Accuracy"], reverse=True)
 
         models = [d["Model"] for d in data]
-        accuracies = [d["Accuracy"] for d in data]
-        precisions = [d["Precision"] for d in data]
-        recalls = [d["Recall"] for d in data]
-        f1_scores = [d["F1-Score"] for d in data]
-        # roc_aucs = [d["ROC-AUC"] for d in data]
+        if variante in ["known_test_insertion", "unknown_test_insertion"]:
+            tp = [d["TP"] for d in data]
+        else:
+            accuracies = [d["Accuracy"] for d in data]
+            precisions = [d["Precision"] for d in data]
+            recalls = [d["Recall"] for d in data]
+            f1_scores = [d["F1-Score"] for d in data]
+            # roc_aucs = [d["ROC-AUC"] for d in data]
 
         # === Plot vorbereiten ===
-        x = np.arange(len(models))
-        width = 0.15
+        if variante in ["known_test_insertion", "unknown_test_insertion"]:
+            x = np.arange(len(models))
+            width = 0.5
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(10, 6))
 
-        ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
-        ax.bar(x - 0.5 * width, precisions, width, label="Precision")
-        ax.bar(x + 0.5 * width, recalls, width, label="Recall")
-        ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
-        # ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+            ax.bar(width, tp, width, label="True Positives")
 
-        # === Achsen und Beschriftung ===
-        ax.set_title(f"Modellvergleich ({variante})")
-        ax.set_xticks(x)
-        ax.set_xticklabels(models, rotation=45, ha="right")
-        ax.set_ylim(0, 1.0)
-        ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
-        ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
-        ax.set_axisbelow(True)  # Linien hinter die Balken
-        ax.legend(ncol=2, fontsize=10, loc="lower right")
-        plt.tight_layout()
+            # === Achsen und Beschriftung ===
+            ax.set_title(f"Modellvergleich ({variante})")
+            ax.set_xticks(x)
+            ax.set_xticklabels(models, rotation=45, ha="right")
+            ax.set_ylim(0, 1.0)
+            ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+            ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax.set_axisbelow(True)  # Linien hinter die Balken
+            ax.legend(ncol=2, fontsize=10, loc="lower right")
+            plt.tight_layout()
 
-        # === Speichern und Anzeigen ===
-        output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
-        plt.savefig(output_path, dpi=300)
-        plt.show()
-        print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
+            # === Speichern und Anzeigen ===
+            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
+            plt.savefig(output_path, dpi=300)
+            plt.show()
+            print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
+        else:
+            x = np.arange(len(models))
+            width = 0.15
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
+            ax.bar(x - 0.5 * width, precisions, width, label="Precision")
+            ax.bar(x + 0.5 * width, recalls, width, label="Recall")
+            ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+            # ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+
+            # === Achsen und Beschriftung ===
+            ax.set_title(f"Modellvergleich ({variante})")
+            ax.set_xticks(x)
+            ax.set_xticklabels(models, rotation=45, ha="right")
+            ax.set_ylim(0, 1.0)
+            ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+            ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+            ax.set_axisbelow(True)  # Linien hinter die Balken
+            ax.legend(ncol=2, fontsize=10, loc="lower right")
+            plt.tight_layout()
+
+            # === Speichern und Anzeigen ===
+            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
+            plt.savefig(output_path, dpi=300)
+            plt.show()
+            print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
 
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster")
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")

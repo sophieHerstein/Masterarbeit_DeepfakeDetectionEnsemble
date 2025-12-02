@@ -213,3 +213,5 @@ NextStep1Large/
 /data/
 /checkpoints/
 /checkpoints2
+plots/.DS_Store
+.DS_Store
