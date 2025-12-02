@@ -100,21 +100,30 @@ def get_test_plots():
 
     for variante in TEST_VARIANTEN:
         # === Daten sammeln ===
-        models = []
-        accuracies, precisions, recalls, f1_scores, roc_aucs = [], [], [], [], []
-
+        data = []
         for model in [*MODELS, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
             file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
             df = pd.read_csv(file)
             df = df.loc[df['TestVariante'] == variante]
             if df.empty:
                 continue
-            models.append(model)
-            accuracies.append(df["Accuracy"].iloc[0])
-            precisions.append(df["Precision"].iloc[0])
-            recalls.append(df["Recall"].iloc[0])
-            f1_scores.append(df["F1-Score"].iloc[0])
-            roc_aucs.append(df["ROC-AUC"].iloc[0])
+            data.append({
+                "Model": model,
+                "Accuracy": df["Accuracy"].iloc[0],
+                "Precision": df["Precision"].iloc[0],
+                "Recall": df["Recall"].iloc[0],
+                "F1-Score": df["F1-Score"].iloc[0],
+                "ROC-AUC": df["ROC-AUC"].iloc[0]
+            })
+
+        data = sorted(data, key=lambda x: x["Accuracy"], reverse=True)
+
+        models = [d["Model"] for d in data]
+        accuracies = [d["Accuracy"] for d in data]
+        precisions = [d["Precision"] for d in data]
+        recalls = [d["Recall"] for d in data]
+        f1_scores = [d["F1-Score"] for d in data]
+        # roc_aucs = [d["ROC-AUC"] for d in data]
 
         # === Plot vorbereiten ===
         x = np.arange(len(models))
@@ -126,25 +135,24 @@ def get_test_plots():
         ax.bar(x - 0.5 * width, precisions, width, label="Precision")
         ax.bar(x + 0.5 * width, recalls, width, label="Recall")
         ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
-        ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+        # ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
 
         # === Achsen und Beschriftung ===
         ax.set_title(f"Modellvergleich ({variante})")
         ax.set_xticks(x)
-        ax.set_xticklabels(models, rotation=45)
-        ax.legend()
+        ax.set_xticklabels(models, rotation=45, ha="right")
+        ax.set_ylim(0, 1.0)
+        ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+        ax.set_axisbelow(True)  # Linien hinter die Balken
+        ax.legend(ncol=2, fontsize=10, loc="lower right")
         plt.tight_layout()
 
         # === Speichern und Anzeigen ===
         output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
-        plt.savefig(output_path)
+        plt.savefig(output_path, dpi=300)
         plt.show()
         print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
-
-import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster")
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
@@ -322,5 +330,5 @@ def plot_overlay_poster():
 if __name__ == "__main__":
     # get_train_plots()
     # get_confusion_matrices()
-    # get_test_plots()
-    plot_overlay_poster()
+    get_test_plots()
+    # plot_overlay_poster()
