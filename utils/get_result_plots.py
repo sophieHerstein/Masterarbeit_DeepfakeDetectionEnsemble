@@ -109,7 +109,7 @@ def get_test_plots():
             df = df.loc[df['TestVariante'] == variante]
             if df.empty:
                 continue
-            print(df.head())
+
             data.append({
                 "Model": model,
                 "Accuracy": df["Accuracy"].iloc[0],
@@ -117,7 +117,7 @@ def get_test_plots():
                 "Recall": df["Recall"].iloc[0],
                 "F1-Score": df["F1-Score"].iloc[0],
                 "ROC-AUC": df["ROC-AUC"].iloc[0],
-                "TP": df["TP"].iloc[0]
+                "TP": df["TN"].iloc[0]
             })
 
         if variante in ["known_test_insertion", "unknown_test_insertion"]:
@@ -138,21 +138,18 @@ def get_test_plots():
         # === Plot vorbereiten ===
         if variante in ["known_test_insertion", "unknown_test_insertion"]:
             x = np.arange(len(models))
-            width = 0.5
 
             fig, ax = plt.subplots(figsize=(10, 6))
-
-            ax.bar(width, tp, width, label="True Positives")
+            width = 0.5
+            ax.bar(x, tp, width, label="True Positives")
 
             # === Achsen und Beschriftung ===
             ax.set_title(f"Modellvergleich ({variante})")
             ax.set_xticks(x)
             ax.set_xticklabels(models, rotation=45, ha="right")
-            ax.set_ylim(0, 1.0)
-            ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+            ax.yaxis.set_major_locator(plt.MultipleLocator(20))
             ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
             ax.set_axisbelow(True)  # Linien hinter die Balken
-            ax.legend(ncol=2, fontsize=10, loc="lower right")
             plt.tight_layout()
 
             # === Speichern und Anzeigen ===
