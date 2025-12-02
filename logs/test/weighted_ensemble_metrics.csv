@@ -9,8 +9,6 @@ weighted_ensemble,known_test_scaled_dir,0.8950,0.8319,0.9900,0.9041,0.9865,891,7
 weighted_ensemble,unknown_test_scaled_dir,0.6033,0.5609,0.9511,0.7057,0.6816,856,230,670,44,0.665282
 weighted_ensemble,known_test_occlusion,0.9706,0.9611,0.9810,0.9709,0.9975,618,605,25,12,0.619234
 weighted_ensemble,unknown_test_occlusion,0.7117,0.6431,0.9511,0.7674,0.8585,856,425,475,44,0.580409
-weighted_ensemble,known_test_insertion,0.9180,0.0000,0.0000,0.0000,nan,0,168,15,0,0.540438
-weighted_ensemble,unknown_test_insertion,0.4679,0.0000,0.0000,0.0000,nan,0,131,149,0,0.661121
 weighted_ensemble,known_test_format_png,0.9738,0.9642,0.9841,0.9741,0.9981,620,607,23,10,0.669700
 weighted_ensemble,unknown_test_format_png,0.7367,0.6667,0.9467,0.7824,0.8655,852,474,426,48,0.859075
 weighted_ensemble,known_test_format_webp,0.9683,0.9525,0.9857,0.9688,0.9972,621,599,31,9,0.805512
