@@ -15,3 +15,5 @@ convnext_small,known_test_format_webp,0.9754,0.9687,0.9825,0.9756,0.9956,619,610
 convnext_small,unknown_test_format_webp,0.7356,0.6685,0.9344,0.7794,0.8352,841,483,417,59,0.000179
 convnext_small,known_test_histogram,0.9738,0.9701,0.9778,0.9739,0.9958,616,611,19,14,0.000172
 convnext_small,unknown_test_histogram,0.7428,0.6841,0.9022,0.7782,0.8267,812,525,375,88,0.000173
+convnext_small,known_test_insertion,0.9454,0.0000,0.0000,0.0000,nan,0,173,10,0,0.005441
+convnext_small,unknown_test_insertion,0.5821,0.0000,0.0000,0.0000,nan,0,163,117,0,0.001801

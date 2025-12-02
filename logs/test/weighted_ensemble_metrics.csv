@@ -15,3 +15,5 @@ weighted_ensemble,known_test_format_webp,0.9683,0.9525,0.9857,0.9688,0.9972,621,
 weighted_ensemble,unknown_test_format_webp,0.6956,0.6274,0.9633,0.7599,0.8141,867,385,515,33,0.847717
 weighted_ensemble,known_test_histogram,0.9706,0.9583,0.9841,0.9710,0.9977,620,603,27,10,0.668578
 weighted_ensemble,unknown_test_histogram,0.7044,0.6409,0.9300,0.7588,0.8503,837,431,469,63,0.787477
+weighted_ensemble,known_test_insertion,0.9180,0.0000,0.0000,0.0000,nan,0,168,15,0,0.541276
+weighted_ensemble,unknown_test_insertion,0.4679,0.0000,0.0000,0.0000,nan,0,131,149,0,0.503886

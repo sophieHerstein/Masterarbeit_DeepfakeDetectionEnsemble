@@ -15,3 +15,5 @@ weighted_meta_classifier_ensemble,known_test_format_webp,0.9817,0.9856,0.9778,0.
 weighted_meta_classifier_ensemble,unknown_test_format_webp,0.7833,0.7429,0.8667,0.8000,0.8562,780,630,270,120,0.725370
 weighted_meta_classifier_ensemble,known_test_histogram,0.9810,0.9840,0.9778,0.9809,0.9980,616,620,10,14,0.601224
 weighted_meta_classifier_ensemble,unknown_test_histogram,0.8089,0.7769,0.8667,0.8193,0.9048,780,676,224,120,0.794833
+weighted_meta_classifier_ensemble,known_test_insertion,0.9727,0.0000,0.0000,0.0000,nan,0,178,5,0,0.545158
+weighted_meta_classifier_ensemble,unknown_test_insertion,0.7321,0.0000,0.0000,0.0000,nan,0,205,75,0,0.508504

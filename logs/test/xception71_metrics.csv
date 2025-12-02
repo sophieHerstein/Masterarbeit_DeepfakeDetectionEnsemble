@@ -15,3 +15,5 @@ xception71,known_test_format_webp,0.9444,0.9192,0.9746,0.9461,0.9875,614,576,54,
 xception71,unknown_test_format_webp,0.6817,0.6214,0.9300,0.7450,0.8001,837,390,510,63,0.000212
 xception71,known_test_histogram,0.9317,0.9185,0.9476,0.9328,0.9795,597,577,53,33,0.000205
 xception71,unknown_test_histogram,0.7017,0.6451,0.8967,0.7503,0.7944,807,456,444,93,0.000209
+xception71,known_test_insertion,0.8743,0.0000,0.0000,0.0000,nan,0,160,23,0,0.014339
+xception71,unknown_test_insertion,0.6821,0.0000,0.0000,0.0000,nan,0,191,89,0,0.004097
