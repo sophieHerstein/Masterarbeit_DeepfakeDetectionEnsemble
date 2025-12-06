@@ -33,9 +33,6 @@ def train_model(config, model_name, variante, grid_search=False):
     train_dataset = datasets.ImageFolder(os.path.join(config["train_dir"], variante), transform=transform)
     val_dataset = datasets.ImageFolder(os.path.join(config["val_dir"], variante), transform=transform)
 
-    print(f"Train class_to_idx: {train_dataset.class_to_idx}")
-    print(f"Val class_to_idx: {val_dataset.class_to_idx}")
-
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=True)
 

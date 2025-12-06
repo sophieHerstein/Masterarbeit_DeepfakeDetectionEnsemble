@@ -1,0 +1,7 @@
+Modell,Train-Acc,Val-Acc,Loss,Eoche
+xception71,97.57,93.17,14.0434,3.0
+mobilenetv2_100,97.97,84.83,10.1586,10.0
+tf_efficientnet_b3,99.67,93.0,2.1549,20.0
+densenet121,98.23,90.83,7.3386,3.0
+resnet50d,99.4,93.33,2.6392,5.0
+convnext_small,94.97,95.67,22.363,3.0
