@@ -23,6 +23,14 @@ MODELS = [
 	"convnext_small"
 ]
 
+ALL_MODELS = [
+    *MODELS,
+    "weighted_ensemble",
+    "unweighted_ensemble",
+    "weighted_meta_classifier_ensemble",
+    "unweighted_meta_classifier_ensemble",
+]
+
 # Trainingsvarianten
 TRAININGS_VARIANTEN = [
     *CATEGORIES,

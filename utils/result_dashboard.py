@@ -5,9 +5,10 @@ import os
 import seaborn as sns
 import numpy as np
 import plotly.graph_objects as go
+from tensorflow.python.keras.layers.serialization import ALL_MODULES
 
 from config import TRAININGS_VARIANTEN, TEST_VARIANTEN
-from config import MODELS
+from utils.config import ALL_MODELS
 
 st.set_page_config(page_title="Masterarbeit Deepfake Detection Ensemble Model Dashboard", layout="wide")
 
@@ -132,8 +133,8 @@ def compute_deltas(model):
 # === Sidebar Selection ===
 st.sidebar.title("Modellauswahl")
 
-models = MODELS
-model = st.sidebar.selectbox("Modell", [*models, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]) if models else None
+models = ALL_MODELS
+model = st.sidebar.selectbox("Modell", models) if models else None
 
 train_types = TRAININGS_VARIANTEN
 test_types = TEST_VARIANTEN
@@ -223,7 +224,7 @@ with tab5:
 
     # === Daten sammeln ===
     data = []
-    for m in [*MODELS, "weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+    for m in ALL_MODELS:
         test_df = load_test_results(m)
         df = test_df.loc[test_df['TestVariante'] == test_type]
         if df.empty:
