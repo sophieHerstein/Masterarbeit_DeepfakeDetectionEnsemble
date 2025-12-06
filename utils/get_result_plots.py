@@ -100,8 +100,6 @@ def get_test_plots():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     for variante in TEST_VARIANTEN:
-        if variante not in ["known_test_insertion", "unknown_test_insertion"]:
-            continue
         # === Daten sammeln ===
         data = []
         for model in ALL_MODELS:
@@ -200,6 +198,14 @@ def get_model_name(model):
         return "ResNet"
     if model == "convnext_small":
         return "ConvNext"
+    if model == "weighted_ensemble":
+        return "Weighted Ensemble"
+    if model == "unweighted_ensemble":
+        return "Unweighted Ensemble"
+    if model == "weighted_meta_classifier_ensemble":
+        return "Weighted Ensemble with Meta Classifier"
+    if model == "unweighted_meta_classifier_ensemble":
+        return "Unweighted Ensemble with Meta Classifier"
     return "NOT FOUND"
 
 
@@ -216,7 +222,7 @@ def load_acc(model, variante):
         return None
     return df["Accuracy"].iloc[0]
 
-def plot_overlay_poster():
+def get_plot_for_poster():
     OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster")
     data = []
 
@@ -257,7 +263,7 @@ def plot_overlay_poster():
     # Sortierung nach unknown normal (absteigend)
     data = sorted(data, key=lambda x: x["normal_known"], reverse=True)
 
-    models = [d["model"] for d in data]
+    models = [get_model_name(d["model"]) for d in data]
     x = np.arange(len(models))
     width = 0.15
 
@@ -381,11 +387,11 @@ def get_group_variants(df, prefix, base):
     return base_row, variants
 
 
-def plot_robustness_for_all_models():
+def get_robustness_plot():
     for model_name in ALL_MODELS:
 
         # --- CSV laden ---
-        csv_path = os.path.join("logs", "test", f"{model_name}_metrics.csv")
+        csv_path = os.path.join(PROJECT_ROOT, "logs", "test", f"{model_name}_metrics.csv")
         if not os.path.exists(csv_path):
             print(f"⚠️ Keine CSV gefunden: {csv_path}")
             continue
@@ -436,7 +442,7 @@ def plot_robustness_for_all_models():
 
             delta_df = pd.DataFrame(delta_rows)
 
-            outdir1 = os.path.join("plots", "robustness")
+            outdir1 = os.path.join(PROJECT_ROOT, "plots", "robustness")
             os.makedirs(outdir1, exist_ok=True)
 
             plt.figure(figsize=(10, 5))
@@ -496,7 +502,7 @@ def plot_robustness_for_all_models():
             plt.legend()
             plt.tight_layout()
 
-            outdir2 = os.path.join("plots", "robustness_profile")
+            outdir2 = os.path.join(PROJECT_ROOT, "plots", "robustness_profile")
             os.makedirs(outdir2, exist_ok=True)
 
             outpath2 = os.path.join(outdir2, f"robustness_profile_{model_name}_{group_label}.png")
@@ -509,5 +515,5 @@ if __name__ == "__main__":
     get_train_plots()
     get_confusion_matrices()
     get_test_plots()
-    plot_overlay_poster()
-    plot_robustness_for_all_models()
+    get_plot_for_poster()
+    get_robustness_plot()
