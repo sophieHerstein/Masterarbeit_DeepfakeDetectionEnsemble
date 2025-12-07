@@ -1,0 +1,19 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+unweighted_ensemble_diverse,known_test_dir,0.9722,0.9514,0.9952,0.9728,0.9980,627,598,32,3,0.404704
+unweighted_ensemble_diverse,unknown_test_dir,0.7356,0.6688,0.9333,0.7792,0.8800,840,484,416,60,0.414067
+unweighted_ensemble_diverse,known_test_jpeg_dir,0.7976,0.7128,0.9968,0.8312,0.9813,628,377,253,2,0.381597
+unweighted_ensemble_diverse,unknown_test_jpeg_dir,0.5728,0.5411,0.9578,0.6915,0.6767,862,169,731,38,0.397142
+unweighted_ensemble_diverse,known_test_noisy_dir,0.6960,0.8709,0.4603,0.6023,0.8580,290,587,43,340,0.387537
+unweighted_ensemble_diverse,unknown_test_noisy_dir,0.5844,0.7405,0.2600,0.3849,0.6885,234,818,82,666,0.403530
+unweighted_ensemble_diverse,known_test_scaled_dir,0.8437,0.7637,0.9952,0.8642,0.9649,627,436,194,3,0.381646
+unweighted_ensemble_diverse,unknown_test_scaled_dir,0.5528,0.5301,0.9300,0.6753,0.5460,837,158,742,63,0.396679
+unweighted_ensemble_diverse,known_test_occlusion,0.9690,0.9470,0.9937,0.9698,0.9966,626,595,35,4,0.397048
+unweighted_ensemble_diverse,unknown_test_occlusion,0.7244,0.6596,0.9278,0.7710,0.8681,835,469,431,65,0.408441
+unweighted_ensemble_diverse,known_test_insertion,0.8470,0.0000,0.0000,0.0000,nan,0,155,28,0,0.411962
+unweighted_ensemble_diverse,unknown_test_insertion,0.4357,0.0000,0.0000,0.0000,nan,0,122,158,0,0.392278
+unweighted_ensemble_diverse,known_test_format_png,0.9722,0.9514,0.9952,0.9728,0.9980,627,598,32,3,0.431092
+unweighted_ensemble_diverse,unknown_test_format_png,0.7356,0.6688,0.9333,0.7792,0.8800,840,484,416,60,0.467264
+unweighted_ensemble_diverse,known_test_format_webp,0.9579,0.9261,0.9952,0.9594,0.9965,627,580,50,3,0.435333
+unweighted_ensemble_diverse,unknown_test_format_webp,0.6789,0.6167,0.9456,0.7465,0.7616,851,371,529,49,0.466162
+unweighted_ensemble_diverse,known_test_histogram,0.9675,0.9442,0.9937,0.9683,0.9965,626,593,37,4,0.395635
+unweighted_ensemble_diverse,unknown_test_histogram,0.7300,0.6630,0.9356,0.7760,0.8722,842,472,428,58,0.409468
