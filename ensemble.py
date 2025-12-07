@@ -31,12 +31,12 @@ class Ensemble:
 
         if self.diverse:
             self.models = {
-                "grayscale": self._load_model("", "grayscaling"),
-                "edges": self._load_model("", "edges"),
-                "frequency": self._load_model("", "frequencies"),
-                "human": self._load_model("", "human"),
-                "building": self._load_model("", "building"),
-                "landscape": self._load_model("", "landscape")
+                "grayscale": self._load_model("convnext_small", "grayscaling"),
+                "edges": self._load_model("xception71", "edges"),
+                "frequency": self._load_model("tf_efficientnet_b3", "frequencies"),
+                "human": self._load_model("mobilenetv2_100", "human"),
+                "building": self._load_model("resnet50d", "building"),
+                "landscape": self._load_model("densenet121", "landscape")
             }
         else:
             self.models = {
