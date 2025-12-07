@@ -16,9 +16,10 @@ import pandas as pd
 
 class Ensemble:
 
-    def __init__(self, weighted, meta, log_csv_path=None):
+    def __init__(self, weighted, meta, diverse, log_csv_path=None):
         self.weighted = weighted
         self.meta = meta
+        self.diverse = diverse
         if self.meta and self.weighted:
             ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_with_weights.pkl")
             with open(ckpt_path, 'rb') as file:
@@ -27,14 +28,25 @@ class Ensemble:
             ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_no_weights.pkl")
             with open(ckpt_path, 'rb') as file:
                 self.meta_classifier = pickle.load(file)
-        self.models = {
-            "grayscale": self._load_model("convnext_small", "grayscaling"),
-            "edges": self._load_model("xception71", "edges"),
-            "frequency": self._load_model("convnext_small", "frequencies"),
-            "human": self._load_model("convnext_small", "human"),
-            "building": self._load_model("convnext_small", "building"),
-            "landscape": self._load_model("densenet121", "landscape")
-        }
+
+        if self.diverse:
+            self.models = {
+                "grayscale": self._load_model("", "grayscaling"),
+                "edges": self._load_model("", "edges"),
+                "frequency": self._load_model("", "frequencies"),
+                "human": self._load_model("", "human"),
+                "building": self._load_model("", "building"),
+                "landscape": self._load_model("", "landscape")
+            }
+        else:
+            self.models = {
+                "grayscale": self._load_model("convnext_small", "grayscaling"),
+                "edges": self._load_model("xception71", "edges"),
+                "frequency": self._load_model("convnext_small", "frequencies"),
+                "human": self._load_model("convnext_small", "human"),
+                "building": self._load_model("convnext_small", "building"),
+                "landscape": self._load_model("densenet121", "landscape")
+            }
 
         self.transform_gray = transforms.Compose([
                 transforms.Resize(int(CONFIG["image_size"] * 1.1)),
