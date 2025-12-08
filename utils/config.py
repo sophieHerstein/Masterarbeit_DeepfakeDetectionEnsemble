@@ -28,8 +28,8 @@ ENSEMBLE_VARIANTEN = [
     # "unweighted_ensemble",
     # "weighted_meta_classifier_ensemble",
     # "unweighted_meta_classifier_ensemble",
-    "weighted_ensemble_diverse",
-    "unweighted_ensemble_diverse",
+    # "weighted_ensemble_diverse",
+    # "unweighted_ensemble_diverse",
     "weighted_meta_classifier_ensemble_diverse",
     "unweighted_meta_classifier_ensemble_diverse",
 ]
