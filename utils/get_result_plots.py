@@ -47,24 +47,62 @@ def get_train_plots():
         df_all = pd.concat(all_dfs, ignore_index=True)
 
         # === Plotten ===
-        metrics = ["Loss", "Train-Acc", "Val-Acc"]
+        metric = "Val-Acc"
         varianten = df_all["Variante"].unique()
 
-        for metric in metrics:
-            for variante in varianten:
-                df_subset = df_all[df_all["Variante"] == variante]
-                plt.figure(figsize=(8, 5))
-                sns.lineplot(data=df_subset, x="Epoche", y=metric, hue="Modell", marker="o")
-                plt.title(f"{metric} über Epochen – {variante}")
-                max_epoch = df_subset["Epoche"].max()
-                plt.xticks(range(0, max_epoch + 1, 2))
-                plt.xlabel("Epoche")
-                plt.ylabel(metric)
-                plt.grid(True, linestyle="--", alpha=0.6)
-                plt.tight_layout()
-                filename = f"{variante}-{metric.lower().replace('-', '_')}.png"
-                plt.savefig(os.path.join(OUTPUT_DIR, filename))
-                plt.close()
+        for variante in varianten:
+            df_subset = df_all[df_all["Variante"] == variante]
+
+            plt.figure(figsize=(8, 5))
+
+            # Hauptplot
+            sns.lineplot(
+                data=df_subset,
+                x="Epoche",                    y=metric,
+                hue="Modell",
+                marker="o",
+                linewidth=2
+            )
+
+            # === Max-Werte pro Modell hervorheben ===
+            for modell in df_subset["Modell"].unique():
+                df_mod = df_subset[df_subset["Modell"] == modell]
+
+                # höchsten Wert finden
+                max_idx = df_mod[metric].idxmax()
+                x_max = df_mod.loc[max_idx, "Epoche"]
+                y_max = df_mod.loc[max_idx, metric]
+
+                # großer Punkt
+                plt.scatter(
+                    x_max, y_max,
+                    s=75,
+                    zorder=5
+                )
+                # aktuelle Achse holen
+                ax = plt.gca()
+
+                # Farbtabelle (Mapping: Modell → Farbe)
+                colors = {line.get_label(): line.get_color() for line in ax.lines}
+                line_color = colors[modell]
+
+                # Linien zu x und y Achse (Crosshair)
+                # kurze, endende Linien
+                plt.plot([x_max, x_max], [df_subset[metric].min(), y_max], linestyle="--", alpha=0.4, color=line_color)
+                plt.plot([df_subset["Epoche"].min(), x_max], [y_max, y_max], linestyle="--", alpha=0.4, color=line_color)
+            # === Plot-Style ===
+            plt.title(f"{metric} über Epochen – {variante}")
+            max_epoch = df_subset["Epoche"].max()
+            plt.xticks(range(0, max_epoch + 1, 2))
+            plt.xlabel("Epoche")
+            plt.ylabel(metric)
+            plt.grid(True, linestyle="--", alpha=0.6)
+            plt.tight_layout()
+
+            # Datei speichern
+            filename = f"{variante}-{metric.lower().replace('-', '_')}.svg"
+            plt.savefig(os.path.join(OUTPUT_DIR, filename))
+            plt.close()
 
         print(f"✅ Plots gespeichert in {OUTPUT_DIR}")
 
@@ -73,7 +111,7 @@ def get_confusion_matrices():
         for testvariante in TEST_VARIANTEN:
             OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "confusion_matrices")
 
-            filename = f"{get_model_name(model)}_{testvariante}_confusion_matrix.png"
+            filename = f"{get_model_name(model)}_{testvariante}_confusion_matrix.svg"
             os.makedirs(OUTPUT_DIR, exist_ok=True)
 
             test_df = load_test_results(model)
@@ -145,14 +183,14 @@ def get_test_plots():
             # === Achsen und Beschriftung ===
             ax.set_title(f"Modellvergleich ({variante})")
             ax.set_xticks(x)
-            ax.set_xticklabels(models, rotation=45, ha="right")
+            ax.set_xticklabels(models, rotation=90, )
             ax.yaxis.set_major_locator(plt.MultipleLocator(20))
             ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
             ax.set_axisbelow(True)  # Linien hinter die Balken
             plt.tight_layout()
 
             # === Speichern und Anzeigen ===
-            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
+            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.svg")
             plt.savefig(output_path, dpi=300)
             plt.show()
             print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
@@ -171,7 +209,7 @@ def get_test_plots():
             # === Achsen und Beschriftung ===
             ax.set_title(f"Modellvergleich ({variante})")
             ax.set_xticks(x)
-            ax.set_xticklabels(models, rotation=45, ha="right")
+            ax.set_xticklabels(models, rotation=90)
             ax.set_ylim(0, 1.0)
             ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
             ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
@@ -180,7 +218,7 @@ def get_test_plots():
             plt.tight_layout()
 
             # === Speichern und Anzeigen ===
-            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.png")
+            output_path = os.path.join(OUTPUT_DIR, f"{variante}_comparison.svg")
             plt.savefig(output_path, dpi=300)
             plt.show()
             print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
@@ -199,13 +237,21 @@ def get_model_name(model):
     if model == "convnext_small":
         return "ConvNext"
     if model == "weighted_ensemble":
-        return "Weighted Ensemble"
+        return "gewichtetes Ensemble"
     if model == "unweighted_ensemble":
-        return "Unweighted Ensemble"
+        return "ungewichtetes Ensemble"
     if model == "weighted_meta_classifier_ensemble":
-        return "Weighted Ensemble with Meta Classifier"
+        return "gewichtetes Ensemble \nmit Meta Classifier"
     if model == "unweighted_meta_classifier_ensemble":
-        return "Unweighted Ensemble with Meta Classifier"
+        return "ungewichtetes Ensemble \nmit Meta Classifier"
+    if model == "weighted_ensemble_diverse":
+        return "gewichtetes Ensemble \nmit diversen Detektoren"
+    if model == "unweighted_ensemble_diverse":
+        return "ungewichtetes Ensemble \nmit diversen Detektoren"
+    if model == "weighted_meta_classifier_ensemble_diverse":
+        return "gewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
+    if model == "unweighted_meta_classifier_ensemble_diverse":
+        return "ungewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
     return "NOT FOUND"
 
 
@@ -358,7 +404,7 @@ def get_plot_for_poster():
     ax.set_title("Accuracy – Known vs. Unknown (Normal & verändert)", fontsize=16)
     ax.set_ylabel("Accuracy")
     ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=45, ha="right")
+    ax.set_xticklabels(models, rotation=90)
     ax.set_ylim(0, 1.0)
     ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
     ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
@@ -367,149 +413,100 @@ def get_plot_for_poster():
     ax.legend(ncol=2, fontsize=10, loc="lower right")
     plt.tight_layout()
 
-    output = os.path.join(OUTPUT_DIR, "overlay_known_unknown.png")
+    output = os.path.join(OUTPUT_DIR, "overlay_known_unknown.svg")
     plt.savefig(output, dpi=300)
     plt.show()
 
     print(f"Plot gespeichert unter: {output}")
 
-def get_group_variants(df, prefix, base):
-    """Gibt (Standard-Serie, Variantenliste) zurück."""
-    if base not in df["TestVariante"].values:
-        return None, []
-
-    base_row = df[df["TestVariante"] == base].iloc[0]
-
-    variants = [
-        v for v in df["TestVariante"].unique()
-        if v.startswith(prefix) and v != base
-    ]
-    return base_row, variants
-
-
 def get_robustness_plot():
-    for model_name in ALL_MODELS:
+    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "robustness_comparison")
+    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-        # --- CSV laden ---
-        csv_path = os.path.join(PROJECT_ROOT, "logs", "test", f"{model_name}_metrics.csv")
-        if not os.path.exists(csv_path):
-            print(f"⚠️ Keine CSV gefunden: {csv_path}")
-            continue
+    metrics = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
 
-        df = pd.read_csv(csv_path)
+    for variante in TEST_VARIANTEN:
+        data = []
 
-        if "TestVariante" not in df.columns:
-            print(f"❌ Spalte 'TestVariante' fehlt in {model_name}")
-            continue
+        for model in ALL_MODELS:
+            file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
+            df = pd.read_csv(file)
 
-        metrics_all = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
-        metrics_profile = ["Accuracy", "Recall", "F1-Score", "ROC-AUC"]
+            # Standard-Baseline bestimmen
+            if "known" in variante:
+                base_name = "known_test_dir"
+            else:
+                base_name = "unknown_test_dir"
 
-        # ======================================================
-        # 1) Gruppen bestimmen (known / unknown)
-        # ======================================================
-        groups = {
-            "known": ("known_", "known_test_dir"),
-            "unknown": ("unknown_", "unknown_test_dir")
-        }
+            base_row = df.loc[df["TestVariante"] == base_name]
+            var_row = df.loc[df["TestVariante"] == variante]
 
-        for group_label, (prefix, base_name) in groups.items():
-
-            base_row, variants = get_group_variants(df, prefix, base_name)
-
-            if base_row is None:
-                print(f"⚠️ Kein Basiswert '{base_name}' für Modell {model_name}")
-                continue
-            if not variants:
-                print(f"⚠️ Keine Varianten für Gruppe {group_label} in {model_name}")
+            if base_row.empty or var_row.empty:
                 continue
 
-            # ======================================================
-            # 2) Robustheitsdiagramm (Δ = Variante – Standard)
-            # ======================================================
-            delta_rows = []
+            base_row = base_row.iloc[0]
+            var_row = var_row.iloc[0]
 
-            for _, row in df.iterrows():
-                if row["TestVariante"] not in variants:
-                    continue
+            # Delta berechnen
+            deltas = {m: var_row[m] - base_row[m] for m in metrics}
 
-                for metric in metrics_all:
-                    delta_rows.append({
-                        "variant": row["TestVariante"],
-                        "Metric": metric,
-                        "Δ": row[metric] - base_row[metric]
-                    })
-
-            delta_df = pd.DataFrame(delta_rows)
-
-            outdir1 = os.path.join(PROJECT_ROOT, "plots", "robustness")
-            os.makedirs(outdir1, exist_ok=True)
-
-            plt.figure(figsize=(10, 5))
-            sns.barplot(data=delta_df, x="variant", y="Δ", hue="Metric")
-            plt.axhline(0, color="black", linestyle="--")
-            plt.xticks(rotation=30, ha="right")
-            plt.title(f"{get_model_name(model_name)} – {group_label.upper()} Robustness vs. {base_name}")
-            plt.tight_layout()
-
-            outpath1 = os.path.join(outdir1, f"robustness_{model_name}_{group_label}.png")
-            plt.savefig(outpath1)
-            plt.close()
-
-            print(f"✅ Robustheitsdiagram gespeichert: {outpath1}")
-
-            # ======================================================
-            # 3) Robustheitsprofil (Δ = Standard – Variante)
-            # ======================================================
-            deltas = {
-                metric: {
-                    var: base_row[metric] - df[df["TestVariante"] == var].iloc[0][metric]
-                    for var in variants
-                }
-                for metric in metrics_profile
+            entry = {
+                "Model": model,
+                "Δ_Accuracy": deltas["Accuracy"],
+                "Δ_Precision": deltas["Precision"],
+                "Δ_Recall": deltas["Recall"],
+                "Δ_F1": deltas["F1-Score"],
+                "Δ_ROC": deltas["ROC-AUC"],
+                "Accuracy": var_row["Accuracy"]
             }
 
-            plt.figure(figsize=(10, 5))
+            data.append(entry)
 
-            width = 0.15
-            x = list(range(len(variants)))
-            offsets = [(-1.5 + i) * width for i in range(len(metrics_profile))]
+        # Wenn keine Daten vorhanden sind → weiter
+        if not data:
+            continue
 
-            for i, metric in enumerate(metrics_profile):
-                bars = plt.bar(
-                    [p + offsets[i] for p in x],
-                    list(deltas[metric].values()),
-                    width=width,
-                    label=metric
-                )
+        # Nach Accuracy-Deltas sortieren
+        data = sorted(data, key=lambda x: x["Accuracy"], reverse=True)
 
-                # Balken-Beschriftung
-                for bar in bars:
-                    h = bar.get_height()
-                    plt.text(
-                        bar.get_x() + bar.get_width() / 2,
-                        h + 0.002,
-                        f"{h:.3f}",
-                        ha="center",
-                        va="bottom",
-                        fontsize=8
-                    )
+        # Für den Plot vorbereiten
+        models = [get_model_name(d["Model"]) for d in data]
+        d_acc = [d["Δ_Accuracy"] for d in data]
+        d_pre = [d["Δ_Precision"] for d in data]
+        d_rec = [d["Δ_Recall"] for d in data]
+        d_f1  = [d["Δ_F1"] for d in data]
+        d_roc = [d["Δ_ROC"] for d in data]
 
-            plt.xticks(x, variants, rotation=30, ha="right")
-            plt.ylabel("Δ (Standard − Variante)")
-            plt.title(f"{get_model_name(model_name)} – {group_label.upper()} Robustness Profile")
-            plt.grid(axis="y", linestyle="--", alpha=0.5)
-            plt.legend()
-            plt.tight_layout()
+        # --- Plot ---
+        x = np.arange(len(models))
+        width = 0.15
 
-            outdir2 = os.path.join(PROJECT_ROOT, "plots", "robustness_profile")
-            os.makedirs(outdir2, exist_ok=True)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.bar(x - 1.5*width, d_acc, width, label="Δ Accuracy")
+        ax.bar(x - 0.5*width, d_pre, width, label="Δ Precision")
+        ax.bar(x + 0.5*width, d_rec, width, label="Δ Recall")
+        ax.bar(x + 1.5*width, d_f1, width, label="Δ F1-Score")
+        ax.bar(x + 2.5*width, d_roc, width, label="Δ ROC-AUC")
 
-            outpath2 = os.path.join(outdir2, f"robustness_profile_{model_name}_{group_label}.png")
-            plt.savefig(outpath2)
-            plt.close()
+        ax.axhline(0, color='black', linestyle='--', linewidth=1)
 
-            print(f"✅ Robustheitsprofil gespeichert: {outpath2}")
+        # Achsen / Formatierung
+        ax.set_title(f"Robustness Comparison (Δ vs. Standard) – {variante}")
+        ax.set_xticks(x)
+        ax.set_xticklabels(models, rotation=90)
+        ax.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
+        ax.set_axisbelow(True)
+        ax.legend(ncol=2, fontsize=10)
+
+        plt.tight_layout()
+
+        # Speichern
+        output_path = os.path.join(OUTPUT_DIR, f"{variante}_robustness.svg")
+        plt.savefig(output_path, dpi=300)
+        plt.show()
+
+        print(f"✅ Robustness Comparison Plot gespeichert unter: {output_path}")
 
 if __name__ == "__main__":
     get_train_plots()
