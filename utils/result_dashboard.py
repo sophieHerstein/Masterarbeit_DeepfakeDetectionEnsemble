@@ -5,10 +5,8 @@ import os
 import seaborn as sns
 import numpy as np
 import plotly.graph_objects as go
-from tensorflow.python.keras.layers.serialization import ALL_MODULES
 
-from config import TRAININGS_VARIANTEN, TEST_VARIANTEN
-from utils.config import ALL_MODELS
+from config import TRAININGS_VARIANTEN, TEST_VARIANTEN, ALL_MODELS
 
 st.set_page_config(page_title="Masterarbeit Deepfake Detection Ensemble Model Dashboard", layout="wide")
 
