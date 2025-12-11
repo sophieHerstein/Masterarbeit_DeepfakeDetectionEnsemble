@@ -16,10 +16,14 @@ import pandas as pd
 
 class Ensemble:
 
-    def __init__(self, weighted, meta, diverse, log_csv_path=None):
+    def __init__(self, weighted, meta, diverse, log_csv_path, specialized=True):
         self.weighted = weighted
         self.meta = meta
         self.diverse = diverse
+        self.specialized = specialized
+        if not self.specialized:
+            self.weighted = False
+            self.diverse = False
         if self.meta and self.weighted:
             ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_with_weights.pkl")
             with open(ckpt_path, 'rb') as file:
@@ -38,7 +42,7 @@ class Ensemble:
                 "building": self._load_model("resnet50d", "building"),
                 "landscape": self._load_model("densenet121", "landscape")
             }
-        else:
+        elif not self.diverse and self.specialized:
             self.models = {
                 "grayscale": self._load_model("convnext_small", "grayscaling"),
                 "edges": self._load_model("xception71", "edges"),
@@ -46,6 +50,15 @@ class Ensemble:
                 "human": self._load_model("convnext_small", "human"),
                 "building": self._load_model("convnext_small", "building"),
                 "landscape": self._load_model("densenet121", "landscape")
+            }
+        elif not self.specialized:
+            self.models = {
+                "grayscale": self._load_model("convnext_small", "single_models"),
+                "edges": self._load_model("xception71", "single_models"),
+                "frequency": self._load_model("tf_efficientnet_b3", "single_models"),
+                "human": self._load_model("mobilenetv2_100", "single_models"),
+                "building": self._load_model("resnet50d", "single_models"),
+                "landscape": self._load_model("densenet121", "single_models")
             }
 
         self.transform_gray = transforms.Compose([
