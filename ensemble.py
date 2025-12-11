@@ -16,7 +16,7 @@ import pandas as pd
 
 class Ensemble:
 
-    def __init__(self, weighted, meta, diverse, log_csv_path, specialized=True):
+    def __init__(self, weighted, meta, diverse, log_csv_path, specialized):
         self.weighted = weighted
         self.meta = meta
         self.diverse = diverse

@@ -1,0 +1,19 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+not_specialized_ensemble,known_test_dir,0.9325,0.9823,0.8810,0.9289,0.9895,555,620,10,75,0.408263
+not_specialized_ensemble,unknown_test_dir,0.7128,0.7001,0.7444,0.7216,0.7853,670,613,287,230,0.418132
+not_specialized_ensemble,known_test_jpeg_dir,0.8960,0.8685,0.9333,0.8998,0.9606,588,541,89,42,0.384810
+not_specialized_ensemble,unknown_test_jpeg_dir,0.6133,0.5793,0.8278,0.6816,0.6954,745,359,541,155,0.399338
+not_specialized_ensemble,known_test_noisy_dir,0.6325,0.9883,0.2683,0.4220,0.8560,169,628,2,461,0.389790
+not_specialized_ensemble,unknown_test_noisy_dir,0.5667,0.6657,0.2678,0.3819,0.6737,241,779,121,659,0.406229
+not_specialized_ensemble,known_test_scaled_dir,0.9159,0.9081,0.9254,0.9167,0.9701,583,571,59,47,0.383696
+not_specialized_ensemble,unknown_test_scaled_dir,0.6378,0.6047,0.7956,0.6871,0.7030,716,432,468,184,0.399811
+not_specialized_ensemble,known_test_occlusion,0.9325,0.9840,0.8794,0.9288,0.9893,554,621,9,76,0.400751
+not_specialized_ensemble,unknown_test_occlusion,0.7156,0.6992,0.7567,0.7268,0.7804,681,607,293,219,0.412938
+not_specialized_ensemble,known_test_insertion,0.9344,0.0000,0.0000,0.0000,nan,0,171,12,0,0.416345
+not_specialized_ensemble,unknown_test_insertion,0.7857,0.0000,0.0000,0.0000,nan,0,220,60,0,0.395408
+not_specialized_ensemble,known_test_format_png,0.9325,0.9823,0.8810,0.9289,0.9895,555,620,10,75,0.436114
+not_specialized_ensemble,unknown_test_format_png,0.7128,0.7001,0.7444,0.7216,0.7853,670,613,287,230,0.472991
+not_specialized_ensemble,known_test_format_webp,0.9294,0.9754,0.8810,0.9258,0.9837,555,616,14,75,0.446608
+not_specialized_ensemble,unknown_test_format_webp,0.6906,0.6632,0.7744,0.7145,0.7562,697,546,354,203,0.476695
+not_specialized_ensemble,known_test_histogram,0.9119,0.9814,0.8397,0.9050,0.9846,529,620,10,101,0.404110
+not_specialized_ensemble,unknown_test_histogram,0.6989,0.6958,0.7067,0.7012,0.7691,636,622,278,264,0.416856

@@ -25,20 +25,20 @@ BASE_MODELS = [
 ]
 
 ENSEMBLE_VARIANTEN = [
-    # "weighted_ensemble",
-    # "unweighted_ensemble",
-    # "weighted_meta_classifier_ensemble",
-    # "unweighted_meta_classifier_ensemble",
-    # "weighted_ensemble_diverse",
-    # "unweighted_ensemble_diverse",
-    # "weighted_meta_classifier_ensemble_diverse",
-    # "unweighted_meta_classifier_ensemble_diverse",
+    "weighted_ensemble",
+    "unweighted_ensemble",
+    "weighted_meta_classifier_ensemble",
+    "unweighted_meta_classifier_ensemble",
+    "weighted_ensemble_diverse",
+    "unweighted_ensemble_diverse",
+    "weighted_meta_classifier_ensemble_diverse",
+    "unweighted_meta_classifier_ensemble_diverse",
     "not_specialized_ensemble",
     "not_specialized_met_classifier_ensemble"
 ]
 
 ALL_MODELS = [
-    # *MODELS,
+    *BASE_MODELS,
    *ENSEMBLE_VARIANTEN
 ]
 

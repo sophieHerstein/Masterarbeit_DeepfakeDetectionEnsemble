@@ -1,3 +1,5 @@
+from dis import specialized
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -57,9 +59,10 @@ def evaluate_model(model_name, config,test_dir):
             f"{model_name}_{test_dir}_details.csv"
         )
         weighted = model_name.startswith("weighted")
-        meta = model_name == "unweighted_meta_classifier_ensemble" or model_name=="weighted_meta_classifier_ensemble" or model_name == "unweighted_meta_classifier_ensemble_diverse" or model_name=="weighted_meta_classifier_ensemble_diverse"
+        meta = model_name == "unweighted_meta_classifier_ensemble" or model_name=="weighted_meta_classifier_ensemble" or model_name == "unweighted_meta_classifier_ensemble_diverse" or model_name=="weighted_meta_classifier_ensemble_diverse" or model_name=="not_specialized_met_classifier_ensemble"
         diverse = model_name.endswith("_diverse")
-        ensemble = Ensemble(weighted=weighted, meta=meta, diverse=diverse, log_csv_path=log_csv_path)
+        specialized = not model_name.startswith("not_specialized")
+        ensemble = Ensemble(weighted=weighted, meta=meta, diverse=diverse, log_csv_path=log_csv_path, specialized=specialized)
         model = ensemble
     else:
         model = get_model(model_name)
