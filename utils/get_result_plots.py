@@ -111,7 +111,7 @@ def get_confusion_matrices():
         for testvariante in TEST_VARIANTEN:
             OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "confusion_matrices")
 
-            filename = f"{get_model_name(model)}_{testvariante}_confusion_matrix.svg"
+            filename = f"{model}_{testvariante}_confusion_matrix.svg"
             os.makedirs(OUTPUT_DIR, exist_ok=True)
 
             test_df = load_test_results(model)
@@ -125,7 +125,7 @@ def get_confusion_matrices():
                         xticklabels=["Real", "Fake"], yticklabels=["Real", "Fake"], ax=ax)
             ax.set_xlabel("Predicted")
             ax.set_ylabel("Actual")
-            ax.set_title("Confusion Matrix")
+            ax.set_title(f"Confusion Matrix ({get_model_name(model)})")
             plt.savefig(os.path.join(OUTPUT_DIR, filename))
             plt.close()
 
@@ -509,8 +509,8 @@ def get_robustness_plot():
         print(f"✅ Robustness Comparison Plot gespeichert unter: {output_path}")
 
 if __name__ == "__main__":
-    get_train_plots()
+    # get_train_plots()
     get_confusion_matrices()
-    get_test_plots()
-    get_plot_for_poster()
-    get_robustness_plot()
+    # get_test_plots()
+    # get_plot_for_poster()
+    # get_robustness_plot()

@@ -2,7 +2,7 @@ import csv
 import os
 import pandas as pd
 
-from utils.config import TRAININGS_VARIANTEN, MODELS
+from utils.config import TRAININGS_VARIANTEN, BASE_MODELS
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "train")
@@ -10,7 +10,7 @@ LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "train")
 for train_variante in TRAININGS_VARIANTEN:
     train_variante_dir = os.path.join(LOG_DIR, train_variante)
 
-    for model in MODELS:
+    for model in BASE_MODELS:
         if os.path.exists(os.path.join(train_variante_dir, f"{model}.csv")):
             df = pd.read_csv(os.path.join(train_variante_dir, f"{model}.csv"))
         else:

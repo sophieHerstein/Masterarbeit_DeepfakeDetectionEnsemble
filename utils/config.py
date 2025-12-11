@@ -1,4 +1,5 @@
 # Array mit Kategorien
+from utils.meta_classifier.meta_classifier import BASE_DIR
 
 CATEGORIES = ["human", "building", "landscape"]
 
@@ -14,7 +15,7 @@ MANIPULATED_VARIANTEN_UNBEKANNT = 6
 MANIPULATED_HUMAN_VARIANTEN_BEKANNT = 7
 
 # CNN Modelle
-MODELS = [
+BASE_MODELS = [
     "xception71",
 	"mobilenetv2_100",
     "tf_efficientnet_b3",

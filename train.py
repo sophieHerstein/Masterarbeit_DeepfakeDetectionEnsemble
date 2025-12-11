@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
 from utils.ensemble.model_loader import get_model
-from utils.config import CONFIG, TRAININGS_VARIANTEN, MODELS, PREPROCESS_METHODS
+from utils.config import CONFIG, TRAININGS_VARIANTEN, BASE_MODELS, PREPROCESS_METHODS
 import os
 import time
 import csv
@@ -156,7 +156,7 @@ if __name__ == '__main__':
         "batch_size": [16, 32]
     }
     for variante in TRAININGS_VARIANTEN:
-        for m in MODELS:
+        for m in BASE_MODELS:
             CONFIG["epochs"] = 3
             optimal_params = parameter_grid_search(CONFIG, param_grid, variante, m)
             CONFIG["learning_rate"] = optimal_params["learning_rate"]
