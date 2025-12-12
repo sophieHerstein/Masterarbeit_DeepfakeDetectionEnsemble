@@ -458,14 +458,13 @@ def test_meta_classifier():
 if __name__ == '__main__':
     # get_train_images_for_robustheit()
     # for t in ["base", "diverse", "not_specialized"]:
-        # test_for_best_classifier_train_data(False, True, t)
+        test_for_best_classifier_train_data(False, True, "not_specialized")
         # test_for_best_classifier_train_data(True, True, t)
-        # test_for_best_classifier_train_data(False, False, t)
+        test_for_best_classifier_train_data(False, False, "not_specialized")
         # test_for_best_classifier_train_data(True, False, t)
-    use_data_from_test_for_train_and_train_model(True, False, "diverse")
-    use_data_from_test_for_train_and_train_model(False, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(True, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(False, False, "diverse")
 
-    # use_data_from_test_for_train_and_train_model(True, False , "not_specialized")
     # use_data_from_test_for_train_and_train_model(False, , "not_specialized")
 
     # remove_train_images_from_test_for_ensemble_images()
