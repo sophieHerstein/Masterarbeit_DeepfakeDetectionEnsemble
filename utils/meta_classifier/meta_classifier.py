@@ -264,7 +264,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
         rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, n_estimators=n_estimators, max_features=max_features, max_depth=max_depth, min_samples_leaf=min_samples_leaf,min_samples_split=min_samples_split, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
-        with open(f'../checkpoints/meta_classifier_for_ensemble{meta_type}_with_weights.pkl', 'wb') as file:
+        with open(f'../../checkpoints/meta_classifier_for_ensemble_{meta_type}_with_weights.pkl', 'wb') as file:
             pickle.dump(rfc_model, file)
 
         # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
@@ -288,7 +288,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
         rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
-        with open(f'../checkpoints/meta_classifier_for_ensemble_{meta_type}_no_weights.pkl', 'wb') as file:
+        with open(f'../../checkpoints/meta_classifier_for_ensemble_{meta_type}_no_weights.pkl', 'wb') as file:
             pickle.dump(rfc_model, file)
 
         # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
@@ -308,7 +308,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
         rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
-        with open(f'../checkpoints/meta_classifier_for_ensemble_{meta_type}_no_weights.pkl', 'wb') as file:
+        with open(f'../../checkpoints/meta_classifier_for_ensemble_{meta_type}_no_weights.pkl', 'wb') as file:
             pickle.dump(rfc_model, file)
 
         # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
@@ -459,18 +459,19 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    # get_train_images_for_robustheit()
-    # for t in ["base", "diverse", "not_specialized"]:
-    #     test_for_best_classifier_train_data(False, True, t)
-    #     test_for_best_classifier_train_data(False, False, t)
-        # if t == "not_specialized":
-        #     continue
-        # test_for_best_classifier_train_data(True, True, t)
-        # test_for_best_classifier_train_data(True, False, t)
+    get_train_images_for_robustheit()
+    for t in ["base", "diverse", "not_specialized"]:
+        test_for_best_classifier_train_data(False, True, t)
+        test_for_best_classifier_train_data(False, False, t)
+        if t == "not_specialized":
+            continue
+        test_for_best_classifier_train_data(True, True, t)
+        test_for_best_classifier_train_data(True, False, t)
+    use_data_from_test_for_train_and_train_model(True, True, "base")
+    use_data_from_test_for_train_and_train_model(False, True, "base")
     use_data_from_test_for_train_and_train_model(True, False, "diverse")
     use_data_from_test_for_train_and_train_model(False, False, "diverse")
-
     use_data_from_test_for_train_and_train_model(False, True, "not_specialized")
 
-    # remove_train_images_from_test_for_ensemble_images()
-    # test_meta_classifier()
+    remove_train_images_from_test_for_ensemble_images()
+    test_meta_classifier()
