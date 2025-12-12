@@ -24,14 +24,30 @@ class Ensemble:
         if not self.specialized:
             self.weighted = False
             self.diverse = False
-        if self.meta and self.weighted:
-            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_with_weights.pkl")
-            with open(ckpt_path, 'rb') as file:
-                self.meta_classifier = pickle.load(file)
-        elif self.meta:
-            ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_no_weights.pkl")
-            with open(ckpt_path, 'rb') as file:
-                self.meta_classifier = pickle.load(file)
+        if self.specialized and not self.diverse:
+            if self.meta and self.weighted:
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_base_with_weights.pkl")
+                with open(ckpt_path, 'rb') as file:
+                    self.meta_classifier = pickle.load(file)
+            elif self.meta:
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_base_no_weights.pkl")
+                with open(ckpt_path, 'rb') as file:
+                    self.meta_classifier = pickle.load(file)
+        elif self.specialized and self.diverse:
+            if self.meta and self.weighted:
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_diverse_with_weights.pkl")
+                with open(ckpt_path, 'rb') as file:
+                    self.meta_classifier = pickle.load(file)
+            elif self.meta:
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_diverse_no_weights.pkl")
+                with open(ckpt_path, 'rb') as file:
+                    self.meta_classifier = pickle.load(file)
+        elif not self.specialized:
+            if self.meta:
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_not_specialized_no_weights.pkl")
+                with open(ckpt_path, 'rb') as file:
+                    self.meta_classifier = pickle.load(file)
+
 
         if self.diverse:
             self.models = {
@@ -376,10 +392,11 @@ class Ensemble:
                     "w_grayscale": weights["grayscale"]
                 }])
 
-                meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
-                meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
-                meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
-                meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+                if not self.diverse:
+                    meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+                    meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+                    meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+                    meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
 
                 pred = self.meta_classifier.predict_proba(meta_features)
         elif self.meta:
@@ -392,10 +409,11 @@ class Ensemble:
                 "p_grayscale": probs["grayscale"]
             }])
 
-            meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
-            meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
-            meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
-            meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+            if not self.diverse:
+                meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+                meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+                meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+                meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
 
             pred = self.meta_classifier.predict_proba(meta_features)
         else:
