@@ -1,9 +1,0 @@
-Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
-xception71,known_test_dir,0.9572,0.9420,0.9744,0.9579,0.9887,877,846,54,23,0.001407
-xception71,unknown_test_dir,0.7167,0.6553,0.9144,0.7635,0.8114,823,467,433,77,0.000200
-xception71,known_test_jpeg_dir,0.8194,0.7394,0.9867,0.8453,0.9671,888,587,313,12,0.000196
-xception71,unknown_test_jpeg_dir,0.6011,0.5596,0.9489,0.7040,0.7579,854,228,672,46,0.000199
-xception71,known_test_noisy_dir,0.7456,0.8260,0.6222,0.7098,0.8314,560,782,118,340,0.000196
-xception71,unknown_test_noisy_dir,0.6467,0.6310,0.7067,0.6667,0.7257,636,528,372,264,0.000200
-xception71,known_test_scaled_dir,0.8756,0.8084,0.9844,0.8878,0.9789,886,690,210,14,0.000202
-xception71,unknown_test_scaled_dir,0.6250,0.5771,0.9356,0.7139,0.7625,842,283,617,58,0.000209

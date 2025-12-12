@@ -1,9 +1,0 @@
-Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
-mobilenetv2_100,known_test_dir,0.9156,0.9269,0.9022,0.9144,0.9751,812,836,64,88,0.000313
-mobilenetv2_100,unknown_test_dir,0.6961,0.6615,0.8033,0.7255,0.7573,723,530,370,177,0.000093
-mobilenetv2_100,known_test_jpeg_dir,0.8083,0.7354,0.9633,0.8341,0.9391,867,588,312,33,0.000089
-mobilenetv2_100,unknown_test_jpeg_dir,0.5783,0.5489,0.8789,0.6758,0.6732,791,250,650,109,0.000088
-mobilenetv2_100,known_test_noisy_dir,0.7328,0.9198,0.5100,0.6562,0.8858,459,860,40,441,0.000086
-mobilenetv2_100,unknown_test_noisy_dir,0.5978,0.6264,0.4844,0.5464,0.6570,436,640,260,464,0.000086
-mobilenetv2_100,known_test_scaled_dir,0.8367,0.7837,0.9300,0.8506,0.9375,837,669,231,63,0.000082
-mobilenetv2_100,unknown_test_scaled_dir,0.5950,0.5637,0.8411,0.6750,0.6646,757,314,586,143,0.000089

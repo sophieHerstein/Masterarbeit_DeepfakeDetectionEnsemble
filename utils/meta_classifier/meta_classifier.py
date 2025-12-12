@@ -13,16 +13,19 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent  # Pfad zu diesem Skript
 PROJECT_DIR = BASE_DIR.parent
 
-def test_for_best_classifier_train_data(all_table_keys, meta_values):
-    train_df = pd.read_csv("../../logs/meta_classifier/train_meta.csv")
+def test_for_best_classifier_train_data(all_table_keys, meta_values, meta_type):
+    train_df = pd.read_csv(f"../../logs/meta_classifier/train/train_meta_{meta_type}.csv")
 
-    filename = "../../logs/meta_classifier/meta_classifier_best_train_params.csv"
+    filename = f"../../logs/meta_classifier/meta_classifier_best_train_params_{meta_type}.csv"
     if not os.path.exists(filename):
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["model", "all_table_keys", "meta_values", "score", "params"])
 
-    train_df = train_df.drop(['img', "img_norm", "img_id"], axis=1)
+    if meta_type == "base":
+        train_df = train_df.drop(['img', "img_norm", "img_id"], axis=1)
+    else:
+        train_df = train_df.drop(['img'], axis=1)
 
     if not all_table_keys:
         train_df = train_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
@@ -70,12 +73,12 @@ def test_for_best_classifier_train_data(all_table_keys, meta_values):
     model_list = [
         ('RFC', RandomForestClassifier(random_state=1, n_jobs=1), filtered_rfc_parameters),
         ('LR', LogisticRegression(random_state=1, n_jobs=1), filtered_lg_parameters),
-        ('GBC', GradientBoostingClassifier(random_state=1, n_jobs=1), filtered_gbc_parameters),
+        ('GBC', GradientBoostingClassifier(random_state=1), filtered_gbc_parameters),
     ]
 
     for name, model, parameters_for_testing in model_list:
         kfold = KFold(n_splits=5)
-        grid_cv = GridSearchCV(estimator=model, param_grid=parameters_for_testing, scoring='accuracy', cv=kfold, n_jobs=-1, verbose=2)
+        grid_cv = GridSearchCV(estimator=model, param_grid=parameters_for_testing, scoring='accuracy', cv=kfold, n_jobs=-1, verbose=2, error_score='raise')
         result = grid_cv.fit(X_train, y_train)
 
         print("{}: Best {} using {}".format(name, result.best_score_, result.best_params_))
@@ -141,32 +144,35 @@ def test_model(model_name, model, X_test, y_test, filename, all_table_keys, meta
                          report.get("1").get("f1-score")])
 
 
-def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
-    filename = "../../logs/meta_classifier/test_results/meta_classifier_test.csv"
-    filename_unknown = "../../logs/meta_classifier/test_results/meta_classifier_unknown_test.csv"
-    filename_jpeg = "../../logs/meta_classifier/test_results/meta_classifier_jpeg_test.csv"
-    filename_noisy = "../../logs/meta_classifier/test_results/meta_classifier_noisy_test.csv"
-    filename_scaled = "../../logs/meta_classifier/test_results/meta_classifier_scaled_test.csv"
+def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, meta_type):
+    # filename = "../../logs/meta_classifier/test_results/meta_classifier_test.csv"
+    # filename_unknown = "../../logs/meta_classifier/test_results/meta_classifier_unknown_test.csv"
+    # filename_jpeg = "../../logs/meta_classifier/test_results/meta_classifier_jpeg_test.csv"
+    # filename_noisy = "../../logs/meta_classifier/test_results/meta_classifier_noisy_test.csv"
+    # filename_scaled = "../../logs/meta_classifier/test_results/meta_classifier_scaled_test.csv"
+    #
+    # create_file(filename)
+    # create_file(filename_unknown)
+    # create_file(filename_jpeg)
+    # create_file(filename_noisy)
+    # create_file(filename_scaled)
 
-    create_file(filename)
-    create_file(filename_unknown)
-    create_file(filename_jpeg)
-    create_file(filename_noisy)
-    create_file(filename_scaled)
+    train_data = pd.read_csv(f"../../logs/meta_classifier/train/train_meta_{meta_type}.csv")
+    # test_data = pd.read_csv(f"../../logs/meta_classifier/test_data/base/test_meta.csv")
+    # unknwon_test_data = pd.read_csv(f"../test_meta_unknown.csv")
+    # jpeg_test_data = pd.read_csv(f"../test_meta_jpeg.csv")
+    # noisy_test_data = pd.read_csv(f"../test_meta_noisy.csv")
+    # scaled_test_data = pd.read_csv(f"../test_meta_scaled.csv")
 
-    train_data = pd.read_csv(f"../../logs/meta_classifier/train_meta.csv")
-    test_data = pd.read_csv(f"../../logs/meta_classifier/test_data/test_meta.csv")
-    unknwon_test_data = pd.read_csv(f"../test_meta_unknown.csv")
-    jpeg_test_data = pd.read_csv(f"../test_meta_jpeg.csv")
-    noisy_test_data = pd.read_csv(f"../test_meta_noisy.csv")
-    scaled_test_data = pd.read_csv(f"../test_meta_scaled.csv")
-
-    train_data = train_data.drop(['img', 'img_norm', 'img_id'], axis=1)
-    noisy_test_data = noisy_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
-    jpeg_test_data = jpeg_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
-    scaled_test_data = scaled_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
-    test_data = test_data.drop(['img'], axis=1)
-    unknwon_test_data = unknwon_test_data.drop(['img', 'prediction', 'final_prob'], axis=1)
+    if meta_type == "base":
+        train_data = train_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    else:
+        train_data = train_data.drop(['img'], axis=1)
+    # noisy_test_data = noisy_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    # jpeg_test_data = jpeg_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    # scaled_test_data = scaled_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
+    # test_data = test_data.drop(['img'], axis=1)
+    # unknwon_test_data = unknwon_test_data.drop(['img', 'prediction', 'final_prob'], axis=1)
 
     prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
 
@@ -176,58 +182,58 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         train_data["conf_mean"] = train_data[prob_cols].mean(axis=1)
         train_data["conf_std"] = train_data[prob_cols].std(axis=1)
 
-        test_data["conf_max"] = test_data[prob_cols].max(axis=1)
-        test_data["conf_min"] = test_data[prob_cols].min(axis=1)
-        test_data["conf_mean"] = test_data[prob_cols].mean(axis=1)
-        test_data["conf_std"] = test_data[prob_cols].std(axis=1)
-
-        unknwon_test_data["conf_max"] = unknwon_test_data[prob_cols].max(axis=1)
-        unknwon_test_data["conf_min"] = unknwon_test_data[prob_cols].min(axis=1)
-        unknwon_test_data["conf_mean"] = unknwon_test_data[prob_cols].mean(axis=1)
-        unknwon_test_data["conf_std"] = unknwon_test_data[prob_cols].std(axis=1)
-
-        noisy_test_data["conf_max"] = noisy_test_data[prob_cols].max(axis=1)
-        noisy_test_data["conf_min"] = noisy_test_data[prob_cols].min(axis=1)
-        noisy_test_data["conf_mean"] = noisy_test_data[prob_cols].mean(axis=1)
-        noisy_test_data["conf_std"] = noisy_test_data[prob_cols].std(axis=1)
-
-        jpeg_test_data["conf_max"] = jpeg_test_data[prob_cols].max(axis=1)
-        jpeg_test_data["conf_min"] = jpeg_test_data[prob_cols].min(axis=1)
-        jpeg_test_data["conf_mean"] = jpeg_test_data[prob_cols].mean(axis=1)
-        jpeg_test_data["conf_std"] = jpeg_test_data[prob_cols].std(axis=1)
-
-        scaled_test_data["conf_max"] = scaled_test_data[prob_cols].max(axis=1)
-        scaled_test_data["conf_min"] = scaled_test_data[prob_cols].min(axis=1)
-        scaled_test_data["conf_mean"] = scaled_test_data[prob_cols].mean(axis=1)
-        scaled_test_data["conf_std"] = scaled_test_data[prob_cols].std(axis=1)
+        # test_data["conf_max"] = test_data[prob_cols].max(axis=1)
+        # test_data["conf_min"] = test_data[prob_cols].min(axis=1)
+        # test_data["conf_mean"] = test_data[prob_cols].mean(axis=1)
+        # test_data["conf_std"] = test_data[prob_cols].std(axis=1)
+        #
+        # unknwon_test_data["conf_max"] = unknwon_test_data[prob_cols].max(axis=1)
+        # unknwon_test_data["conf_min"] = unknwon_test_data[prob_cols].min(axis=1)
+        # unknwon_test_data["conf_mean"] = unknwon_test_data[prob_cols].mean(axis=1)
+        # unknwon_test_data["conf_std"] = unknwon_test_data[prob_cols].std(axis=1)
+        #
+        # noisy_test_data["conf_max"] = noisy_test_data[prob_cols].max(axis=1)
+        # noisy_test_data["conf_min"] = noisy_test_data[prob_cols].min(axis=1)
+        # noisy_test_data["conf_mean"] = noisy_test_data[prob_cols].mean(axis=1)
+        # noisy_test_data["conf_std"] = noisy_test_data[prob_cols].std(axis=1)
+        #
+        # jpeg_test_data["conf_max"] = jpeg_test_data[prob_cols].max(axis=1)
+        # jpeg_test_data["conf_min"] = jpeg_test_data[prob_cols].min(axis=1)
+        # jpeg_test_data["conf_mean"] = jpeg_test_data[prob_cols].mean(axis=1)
+        # jpeg_test_data["conf_std"] = jpeg_test_data[prob_cols].std(axis=1)
+        #
+        # scaled_test_data["conf_max"] = scaled_test_data[prob_cols].max(axis=1)
+        # scaled_test_data["conf_min"] = scaled_test_data[prob_cols].min(axis=1)
+        # scaled_test_data["conf_mean"] = scaled_test_data[prob_cols].mean(axis=1)
+        # scaled_test_data["conf_std"] = scaled_test_data[prob_cols].std(axis=1)
 
     if not all_table_keys:
         train_data = train_data.drop(
             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        test_data = test_data.drop(
-            ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        unknwon_test_data = unknwon_test_data.drop(
-                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        noisy_test_data = noisy_test_data.drop(
-                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        jpeg_test_data = jpeg_test_data.drop(
-                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
-        scaled_test_data = scaled_test_data.drop(
-                    ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        # test_data = test_data.drop(
+        #     ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        # unknwon_test_data = unknwon_test_data.drop(
+        #             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        # noisy_test_data = noisy_test_data.drop(
+        #             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        # jpeg_test_data = jpeg_test_data.drop(
+        #             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
+        # scaled_test_data = scaled_test_data.drop(
+        #             ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
 
 
     X_train = train_data.drop(columns=['label'])
     y_train = train_data['label']
-    X_test = test_data.drop(columns=['label'])
-    y_test = test_data['label']
-    X_unknown_test = unknwon_test_data.drop(columns=['label'])
-    y_unknown_test = unknwon_test_data['label']
-    X_noisy_test = noisy_test_data.drop(columns=['label'])
-    y_noisy_test = noisy_test_data['label']
-    X_scaled_test = scaled_test_data.drop(columns=['label'])
-    y_scaled_test = scaled_test_data['label']
-    X_jpeg_test = jpeg_test_data.drop(columns=['label'])
-    y_jpeg_test = jpeg_test_data['label']
+    # X_test = test_data.drop(columns=['label'])
+    # y_test = test_data['label']
+    # X_unknown_test = unknwon_test_data.drop(columns=['label'])
+    # y_unknown_test = unknwon_test_data['label']
+    # X_noisy_test = noisy_test_data.drop(columns=['label'])
+    # y_noisy_test = noisy_test_data['label']
+    # X_scaled_test = scaled_test_data.drop(columns=['label'])
+    # y_scaled_test = scaled_test_data['label']
+    # X_jpeg_test = jpeg_test_data.drop(columns=['label'])
+    # y_jpeg_test = jpeg_test_data['label']
 
     if all_table_keys and meta_values:
         learning_rate = 0.1
@@ -238,10 +244,10 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         gbc_model = GradientBoostingClassifier(random_state=1, learning_rate=learning_rate, max_depth=max_depth, n_estimators=n_estimators, subsample=subsample)
         gbc_model.fit(X_train, y_train)
 
-        with open('../../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
+        with open(f'../../checkpoints/meta_classifier_for_ensemble_{meta_type}_with_weights.pkl', 'wb') as file:
             pickle.dump(gbc_model, file)
 
-        test_model("GBC", gbc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("GBC", gbc_model, X_test, y_test, filename, all_table_keys, meta_values)
         # test_model("GBC", gbc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
         # test_model("GBC", gbc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
         # test_model("GBC", gbc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
@@ -261,7 +267,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         # with open('../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'wb') as file:
         #     pickle.dump(lr_model, file)
 
-        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
@@ -279,10 +285,10 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
 
-        with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
+        with open(f'../checkpoints/meta_classifier_for_ensemble_{meta_type}_no_weights.pkl', 'wb') as file:
             pickle.dump(rfc_model, file)
 
-        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
@@ -303,7 +309,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
         # with open('../checkpoints/meta_classifier_for_ensemble_no_weights.pkl', 'wb') as file:
         #     pickle.dump(lr_model, file)
 
-        test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
+        # test_model("RFC", rfc_model, X_test, y_test, filename, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_unknown_test, y_unknown_test, filename_unknown, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_scaled_test, y_scaled_test, filename_scaled, all_table_keys, meta_values)
         # test_model("RFC", rfc_model, X_jpeg_test, y_jpeg_test, filename_jpeg, all_table_keys, meta_values)
@@ -311,7 +317,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values):
 
 
 def remove_train_images_from_test_for_ensemble_images():
-    csv_path = "../../logs/meta_classifier/train_meta.csv"
+    csv_path = "../../logs/meta_classifier/train/train_meta_base.csv"
     df = pd.read_csv(csv_path)
 
     target_root = "../data/test/meta_classifier_train_data"
@@ -371,7 +377,7 @@ def get_relative_subpath(path: str) -> Path:
 
 def get_train_images_for_robustheit():
 
-    base = pd.read_csv("../../logs/meta_classifier/train_meta.csv")
+    base = pd.read_csv("../../logs/meta_classifier/train/train_meta_base.csv")
     base["img_norm"] = base["img"].apply(normalize)
     base["img_id"] = base["img_norm"].apply(extract_base_id)
 
@@ -444,21 +450,23 @@ def get_train_images_for_robustheit():
 
 
 def test_meta_classifier():
-    lr_model = pickle.load(open('../../checkpoints/meta_classifier_for_ensemble_with_weights.pkl', 'rb'))
-    test_data = pd.read_csv("../../logs/meta_classifier/test_data/test_meta.csv")
+    lr_model = pickle.load(open('../../checkpoints/meta_classifier_for_ensemble_base_with_weights.pkl', 'rb'))
+    test_data = pd.read_csv("../../logs/meta_classifier/test_data/base/test_meta.csv")
     test_data = test_data.drop(['img', 'label'], axis=1)
     predictions = lr_model.predict_proba(test_data)
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    get_train_images_for_robustheit()
-    test_for_best_classifier_train_data(False, True)
-    test_for_best_classifier_train_data(True, True)
-    test_for_best_classifier_train_data(False, False)
-    test_for_best_classifier_train_data(True, False)
-    use_data_from_test_for_train_and_train_model(True, True)
-    use_data_from_test_for_train_and_train_model(False, True)
-    use_data_from_test_for_train_and_train_model(True, False)
-    use_data_from_test_for_train_and_train_model(False, False)
-    remove_train_images_from_test_for_ensemble_images()
-    test_meta_classifier()
+    # get_train_images_for_robustheit()
+    # for t in ["base", "diverse", "not_specialized"]:
+    for t in ["diverse","not_specialized"]:
+        # test_for_best_classifier_train_data(False, True, t)
+        # test_for_best_classifier_train_data(True, True, t)
+        # test_for_best_classifier_train_data(False, False, t)
+        # test_for_best_classifier_train_data(True, False, t)
+        use_data_from_test_for_train_and_train_model(True, True, t)
+        use_data_from_test_for_train_and_train_model(False, True, t)
+        use_data_from_test_for_train_and_train_model(True, False, t)
+        use_data_from_test_for_train_and_train_model(False, False, t)
+    # remove_train_images_from_test_for_ensemble_images()
+    # test_meta_classifier()
