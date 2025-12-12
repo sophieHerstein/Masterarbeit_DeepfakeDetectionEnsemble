@@ -1,6 +1,4 @@
 # Array mit Kategorien
-from utils.meta_classifier.meta_classifier import BASE_DIR
-
 CATEGORIES = ["human", "building", "landscape"]
 
 #Methoden für das Vorverarbeiten der Bilder
@@ -25,20 +23,20 @@ BASE_MODELS = [
 ]
 
 ENSEMBLE_VARIANTEN = [
-    "weighted_ensemble",
-    "unweighted_ensemble",
-    "weighted_meta_classifier_ensemble",
-    "unweighted_meta_classifier_ensemble",
+    # "weighted_ensemble",
+    # "unweighted_ensemble",
+    # "weighted_meta_classifier_ensemble",
+    # "unweighted_meta_classifier_ensemble",
     "weighted_ensemble_diverse",
     "unweighted_ensemble_diverse",
-    "weighted_meta_classifier_ensemble_diverse",
-    "unweighted_meta_classifier_ensemble_diverse",
+    # "weighted_meta_classifier_ensemble_diverse",
+    # "unweighted_meta_classifier_ensemble_diverse",
     "not_specialized_ensemble",
-    "not_specialized_met_classifier_ensemble"
+    # "not_specialized_meta_classifier_ensemble"
 ]
 
 ALL_MODELS = [
-    *BASE_MODELS,
+    # *BASE_MODELS,
    *ENSEMBLE_VARIANTEN
 ]
 
@@ -131,6 +129,12 @@ CONFIG = {
     "unknown_test_format_webp": "data/test/unknown_test_format_webp",
     "known_test_histogram": "data/test/known_test_histogram",
     "unknown_test_histogram": "data/test/unknown_test_histogram",
+
+    "meta_train_dir": "data/test/meta_classifier_train_data/known_test",
+    "meta_train_jpeg_dir": "data/test/meta_classifier_train_data/known_test_jpeg",
+    "meta_train_noisy_dir": "data/test/meta_classifier_train_data/known_test_noisy",
+    "meta_train_scaled_dir": "data/test/meta_classifier_train_data/known_test_scaled",
+
     "image_size": 224,
     "epochs": 30,
     "early_stopping_patience": 4,

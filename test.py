@@ -31,7 +31,7 @@ def get_num_parameters(model):
     return sum(p.numel() for p in model.parameters())
 
 
-def evaluate_model(model_name, config,test_dir):
+def evaluate_model(model_name, config, test_dir, meta_train=False):
     print(f"Starte Evaluation für Modell: {model_name} ({test_dir})")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,10 +54,16 @@ def evaluate_model(model_name, config,test_dir):
 
     # Modell laden
     if model_name in ENSEMBLE_VARIANTEN:
-        log_csv_path = os.path.join(
-            "logs", "test", "ensemble",
-            f"{model_name}_{test_dir}_details.csv"
-        )
+        if meta_train:
+            log_csv_path = os.path.join(
+                "logs", "meta_train",
+                f"{model_name}_{test_dir}_details.csv"
+            )
+        else:
+            log_csv_path = os.path.join(
+                "logs", "test", "ensemble",
+                f"{model_name}_{test_dir}_details.csv"
+            )
         weighted = model_name.startswith("weighted")
         meta = model_name == "unweighted_meta_classifier_ensemble" or model_name=="weighted_meta_classifier_ensemble" or model_name == "unweighted_meta_classifier_ensemble_diverse" or model_name=="weighted_meta_classifier_ensemble_diverse" or model_name=="not_specialized_met_classifier_ensemble"
         diverse = model_name.endswith("_diverse")
@@ -111,54 +117,56 @@ def evaluate_model(model_name, config,test_dir):
                 "images": num_images,
                 "avg_time/img": f"{(total_time / max(1, num_images)):.4f}s"
             })
+    if not meta_train:
+        avg_time_per_image = total_time / num_images if num_images > 0 else 0
 
-    avg_time_per_image = total_time / num_images if num_images > 0 else 0
+        # Metriken
+        acc = accuracy_score(y_true, y_pred)
+        prec = precision_score(y_true, y_pred)
+        rec = recall_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred)
+        try:
+            roc_auc = roc_auc_score(y_true, y_prob)
+        except Exception:
+            roc_auc = float("nan")
+        cm = confusion_matrix(y_true, y_pred)
+        tn, fp, fn, tp = cm.ravel()
 
-    # Metriken
-    acc = accuracy_score(y_true, y_pred)
-    prec = precision_score(y_true, y_pred)
-    rec = recall_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred)
-    try:
-        roc_auc = roc_auc_score(y_true, y_prob)
-    except Exception:
-        roc_auc = float("nan")
-    cm = confusion_matrix(y_true, y_pred)
-    tn, fp, fn, tp = cm.ravel()
+        print(f"Accuracy:  {acc:.4f}")
+        print(f"Precision: {prec:.4f}")
+        print(f"Recall:    {rec:.4f}")
+        print(f"F1-Score:  {f1:.4f}")
+        print(f"ROC-AUC:   {roc_auc:.4f}")
+        print(f"Confusion Matrix: TN={tn}, FP={fp}, FN={fn}, TP={tp}")
 
-    print(f"Accuracy:  {acc:.4f}")
-    print(f"Precision: {prec:.4f}")
-    print(f"Recall:    {rec:.4f}")
-    print(f"F1-Score:  {f1:.4f}")
-    print(f"ROC-AUC:   {roc_auc:.4f}")
-    print(f"Confusion Matrix: TN={tn}, FP={fp}, FN={fn}, TP={tp}")
+        # Ergebnisse ins CSV schreiben
+        metrics_csv = os.path.join("logs", "test", f"{model_name}_metrics.csv")
+        os.makedirs(os.path.dirname(metrics_csv), exist_ok=True)
+        write_header = not os.path.exists(metrics_csv)
+        with open(metrics_csv, "a", newline="") as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow([
+                    "Modell", "TestVariante",
+                    "Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC",
+                    "TP", "TN", "FP", "FN",
+                    "Avg-Time/Bild (s)"
+                ])
 
-    # Ergebnisse ins CSV schreiben
-    metrics_csv = os.path.join("logs", "test", f"{model_name}_metrics.csv")
-    os.makedirs(os.path.dirname(metrics_csv), exist_ok=True)
-    write_header = not os.path.exists(metrics_csv)
-    with open(metrics_csv, "a", newline="") as f:
-        writer = csv.writer(f)
-        if write_header:
             writer.writerow([
-                "Modell", "TestVariante",
-                "Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC",
-                "TP", "TN", "FP", "FN",
-                "Avg-Time/Bild (s)"
-            ])
-
-        writer.writerow([
-                model_name, test_dir,
-                f"{acc:.4f}", f"{prec:.4f}", f"{rec:.4f}", f"{f1:.4f}", f"{roc_auc:.4f}",
-                tp, tn, fp, fn,
-                f"{avg_time_per_image:.6f}"
-            ])
+                    model_name, test_dir,
+                    f"{acc:.4f}", f"{prec:.4f}", f"{rec:.4f}", f"{f1:.4f}", f"{roc_auc:.4f}",
+                    tp, tn, fp, fn,
+                    f"{avg_time_per_image:.6f}"
+                ])
 
     print(f"Evaluation für {model_name} abgeschlossen.\n\n")
 
 
 if __name__ == "__main__":
     for name in ALL_MODELS:
-        for testdir in TEST_VARIANTEN:
-            evaluate_model(name, CONFIG, testdir)
+    # for testdir in TEST_VARIANTEN:
+    #     evaluate_model(name, CONFIG, testdir)
+        for testdir in ["meta_train_dir","meta_train_jpeg_dir","meta_train_noisy_dir","meta_train_scaled_dir"]:
+            evaluate_model(name, CONFIG, testdir, True)
 
