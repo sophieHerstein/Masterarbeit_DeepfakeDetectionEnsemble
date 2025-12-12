@@ -69,12 +69,12 @@ class Ensemble:
             }
         elif not self.specialized:
             self.models = {
-                "grayscale": self._load_model("convnext_small", "single_models"),
-                "edges": self._load_model("xception71", "single_models"),
-                "frequency": self._load_model("tf_efficientnet_b3", "single_models"),
-                "human": self._load_model("mobilenetv2_100", "single_models"),
-                "building": self._load_model("resnet50d", "single_models"),
-                "landscape": self._load_model("densenet121", "single_models")
+                "single_models_1": self._load_model("convnext_small", "single_models"),
+                "single_models_2": self._load_model("xception71", "single_models"),
+                "single_models_3": self._load_model("tf_efficientnet_b3", "single_models"),
+                "single_models_4": self._load_model("mobilenetv2_100", "single_models"),
+                "single_models_5": self._load_model("resnet50d", "single_models"),
+                "single_models_6": self._load_model("densenet121", "single_models")
             }
 
         self.transform_gray = transforms.Compose([
@@ -167,6 +167,17 @@ class Ensemble:
 
         with torch.no_grad():
             logits = self.models['human'](img_tensor)
+            probs = torch.softmax(logits, dim=1).squeeze()
+
+        return probs[1].item()
+
+    def _is_deepfake(self, img, id):
+
+        image = Image.open(img).convert("RGB")
+        img_tensor = self.transform(image).unsqueeze(0)
+
+        with torch.no_grad():
+            logits = self.models[f'single_models_{id}'](img_tensor)
             probs = torch.softmax(logits, dim=1).squeeze()
 
         return probs[1].item()
@@ -335,14 +346,25 @@ class Ensemble:
 
     def predict(self, img, label=None, verbose: bool = True, log: bool = True):
         # Einzelwahrscheinlichkeiten
-        probs = {
-            "human": self._is_deepfake_human(img),
-            "landscape": self._is_deepfake_landscape(img),
-            "building": self._is_deepfake_building(img),
-            "frequency": self._is_deepfake_frequence(img),
-            "grayscale": self._is_deepfake_grayscale(img),
-            "edges": self._is_deepfake_edges(img),
-        }
+        if self.specialized:
+            probs = {
+                "human": self._is_deepfake_human(img),
+                "landscape": self._is_deepfake_landscape(img),
+                "building": self._is_deepfake_building(img),
+                "frequency": self._is_deepfake_frequence(img),
+                "grayscale": self._is_deepfake_grayscale(img),
+                "edges": self._is_deepfake_edges(img),
+            }
+        else:
+            # der einfachheit halber bleiben die keys die selben
+            probs = {
+                "human": self._is_deepfake(img, 1),
+                "landscape": self._is_deepfake(img, 2),
+                "building": self._is_deepfake(img, 3),
+                "frequency": self._is_deepfake(img, 4),
+                "grayscale": self._is_deepfake(img, 5),
+                "edges": self._is_deepfake(img, 6),
+            }
 
         prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
 

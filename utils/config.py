@@ -29,10 +29,10 @@ ENSEMBLE_VARIANTEN = [
     # "unweighted_meta_classifier_ensemble",
     # "weighted_ensemble_diverse",
     # "unweighted_ensemble_diverse",
-    "weighted_meta_classifier_ensemble_diverse",
-    "unweighted_meta_classifier_ensemble_diverse",
-    # "not_specialized_ensemble",
-    "not_specialized_meta_classifier_ensemble"
+    # "weighted_meta_classifier_ensemble_diverse",
+    # "unweighted_meta_classifier_ensemble_diverse",
+    "not_specialized_ensemble",
+    # "not_specialized_meta_classifier_ensemble"
 ]
 
 ALL_MODELS = [

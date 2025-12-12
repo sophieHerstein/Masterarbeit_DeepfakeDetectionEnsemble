@@ -163,8 +163,8 @@ def evaluate_model(model_name, config, test_dir, meta_train=False):
 
 if __name__ == "__main__":
     for name in ALL_MODELS:
-        for testdir in TEST_VARIANTEN:
-            evaluate_model(name, CONFIG, testdir)
-        # for testdir in ["meta_train_dir","meta_train_jpeg_dir","meta_train_noisy_dir","meta_train_scaled_dir"]:
-        #     evaluate_model(name, CONFIG, testdir, True)
+    #     for testdir in TEST_VARIANTEN:
+    #         evaluate_model(name, CONFIG, testdir)
+        for testdir in ["meta_train_dir","meta_train_jpeg_dir","meta_train_noisy_dir","meta_train_scaled_dir"]:
+            evaluate_model(name, CONFIG, testdir, True)
 
