@@ -25,7 +25,7 @@ def test_for_best_classifier_train_data(all_table_keys, meta_values, meta_type):
     if meta_type == "base":
         train_df = train_df.drop(['img', "img_norm", "img_id"], axis=1)
     else:
-        train_df = train_df.drop(['img'], axis=1)
+        train_df = train_df.drop(['img', 'final_prob', 'prediction'], axis=1)
 
     if not all_table_keys:
         train_df = train_df.drop(['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale'], axis=1)
@@ -167,7 +167,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
     if meta_type == "base":
         train_data = train_data.drop(['img', 'img_norm', 'img_id'], axis=1)
     else:
-        train_data = train_data.drop(['img'], axis=1)
+        train_data = train_data.drop(['img', 'final_prob', 'prediction'], axis=1)
     # noisy_test_data = noisy_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
     # jpeg_test_data = jpeg_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
     # scaled_test_data = scaled_test_data.drop(['img', 'img_norm', 'img_id'], axis=1)
@@ -459,19 +459,20 @@ def test_meta_classifier():
     print(predictions[0][1])
 
 if __name__ == '__main__':
-    get_train_images_for_robustheit()
-    for t in ["base", "diverse", "not_specialized"]:
+    # get_train_images_for_robustheit()
+    # for t in ["base", "diverse", "not_specialized"]:
+    for t in ["diverse", "not_specialized"]:
         test_for_best_classifier_train_data(False, True, t)
         test_for_best_classifier_train_data(False, False, t)
         if t == "not_specialized":
             continue
         test_for_best_classifier_train_data(True, True, t)
         test_for_best_classifier_train_data(True, False, t)
-    use_data_from_test_for_train_and_train_model(True, True, "base")
-    use_data_from_test_for_train_and_train_model(False, True, "base")
-    use_data_from_test_for_train_and_train_model(True, False, "diverse")
-    use_data_from_test_for_train_and_train_model(False, False, "diverse")
-    use_data_from_test_for_train_and_train_model(False, True, "not_specialized")
-
-    remove_train_images_from_test_for_ensemble_images()
-    test_meta_classifier()
+    # use_data_from_test_for_train_and_train_model(True, True, "base")
+    # use_data_from_test_for_train_and_train_model(False, True, "base")
+    # use_data_from_test_for_train_and_train_model(True, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(False, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(False, True, "not_specialized")
+    #
+    # remove_train_images_from_test_for_ensemble_images()
+    # test_meta_classifier()
