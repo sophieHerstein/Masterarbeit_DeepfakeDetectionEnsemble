@@ -392,11 +392,12 @@ class Ensemble:
                     "w_grayscale": weights["grayscale"]
                 }])
 
-                if not self.diverse:
-                    meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
-                    meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
-                    meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
-                    meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+                if self.specialized:
+                    if not self.diverse:
+                        meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+                        meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+                        meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+                        meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
 
                 pred = self.meta_classifier.predict_proba(meta_features)
         elif self.meta:
@@ -409,11 +410,12 @@ class Ensemble:
                 "p_grayscale": probs["grayscale"]
             }])
 
-            if not self.diverse:
-                meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
-                meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
-                meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
-                meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
+            if self.specialized:
+                if not self.diverse:
+                    meta_features["conf_max"] = meta_features[prob_cols].max(axis=1)
+                    meta_features["conf_min"] = meta_features[prob_cols].min(axis=1)
+                    meta_features["conf_mean"] = meta_features[prob_cols].mean(axis=1)
+                    meta_features["conf_std"] = meta_features[prob_cols].std(axis=1)
 
             pred = self.meta_classifier.predict_proba(meta_features)
         else:
