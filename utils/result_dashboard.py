@@ -128,6 +128,42 @@ def compute_deltas(model):
 
     return known_df, unknown_df
 
+
+def get_model_name(model):
+    if model == "xception71":
+        return "Xception"
+    if model == "mobilenetv2_100":
+        return "MobileNetV2"
+    if model == "tf_efficientnet_b3":
+        return "EfficientNet"
+    if model == "densenet121":
+        return "DenseNet"
+    if model == "resnet50d":
+        return "ResNet"
+    if model == "convnext_small":
+        return "ConvNext"
+    if model == "weighted_ensemble":
+        return "gewichtetes Ensemble"
+    if model == "unweighted_ensemble":
+        return "ungewichtetes Ensemble"
+    if model == "weighted_meta_classifier_ensemble":
+        return "gewichtetes Ensemble \nmit Meta Classifier"
+    if model == "unweighted_meta_classifier_ensemble":
+        return "ungewichtetes Ensemble \nmit Meta Classifier"
+    if model == "weighted_ensemble_diverse":
+        return "gewichtetes Ensemble \nmit diversen Detektoren"
+    if model == "unweighted_ensemble_diverse":
+        return "ungewichtetes Ensemble \nmit diversen Detektoren"
+    if model == "weighted_meta_classifier_ensemble_diverse":
+        return "gewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
+    if model == "unweighted_meta_classifier_ensemble_diverse":
+        return "ungewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
+    if model == "not_specialized_ensemble":
+        return "nicht spezialisiertes Ensemble"
+    if model == "not_specialized_meta_classifier_ensemble":
+        return "nicht spezialisiertes Ensemble \nmit Meta Classifier"
+    return "NOT FOUND"
+
 # === Sidebar Selection ===
 st.sidebar.title("Modellauswahl")
 
@@ -219,7 +255,6 @@ with tab4:
 with tab5:
     st.header("🏆 Testergebnisse")
     test_type = st.selectbox("Testarten", test_types, key="testtypes_tab5") if test_types else None
-
     # === Daten sammeln ===
     data = []
     for m in ALL_MODELS:
@@ -227,53 +262,87 @@ with tab5:
         df = test_df.loc[test_df['TestVariante'] == test_type]
         if df.empty:
             continue
+
         data.append({
             "Model": m,
             "Accuracy": df["Accuracy"].iloc[0],
             "Precision": df["Precision"].iloc[0],
             "Recall": df["Recall"].iloc[0],
             "F1-Score": df["F1-Score"].iloc[0],
-            "ROC-AUC": df["ROC-AUC"].iloc[0]
+            "ROC-AUC": df["ROC-AUC"].iloc[0],
+            "TP": df["TN"].iloc[0]
         })
 
     if not data:
         st.warning("Keine Daten für diese Testvariante gefunden.")
         st.stop()
 
-    # === Sortier-Option ===
-    sort_metric = st.radio(
-        "Sortiere nach:",
-        ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"],
-        horizontal=True,
-        key="sort_metric_tab5"
-    )
+    if test_type not in ["known_test_insertion", "unknown_test_insertion"]:
+        # === Sortier-Option ===
+        sort_metric = st.radio(
+            "Sortiere nach:",
+            ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"],
+            horizontal=True,
+            key="sort_metric_tab5"
+        )
+        # === Sortieren ===
+        data = sorted(data, key=lambda x: x[sort_metric], reverse=True)
+    else:
+        data = sorted(data, key=lambda x: x["TP"], reverse=True)
 
-    # === Sortieren ===
-    data = sorted(data, key=lambda x: x[sort_metric], reverse=True)
+    models = [get_model_name(d["Model"]) for d in data]
+    if test_type in ["known_test_insertion", "unknown_test_insertion"]:
+        tp = [d["TP"] for d in data]
+    else:
+        accuracies = [d["Accuracy"] for d in data]
+        precisions = [d["Precision"] for d in data]
+        recalls = [d["Recall"] for d in data]
+        f1_scores = [d["F1-Score"] for d in data]
+        roc_aucs = [d["ROC-AUC"] for d in data]
 
     # === Plot vorbereiten ===
-    models = [d["Model"] for d in data]
-    accuracies = [d["Accuracy"] for d in data]
-    precisions = [d["Precision"] for d in data]
-    recalls = [d["Recall"] for d in data]
-    f1_scores = [d["F1-Score"] for d in data]
-    roc_aucs = [d["ROC-AUC"] for d in data]
+    if test_type in ["known_test_insertion", "unknown_test_insertion"]:
+        x = np.arange(len(models))
 
-    x = np.arange(len(models))
-    width = 0.15
-    fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 6))
+        width = 0.5
+        ax.bar(x, tp, width, label="True Positives")
 
-    ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
-    ax.bar(x - 0.5 * width, precisions, width, label="Precision")
-    ax.bar(x + 0.5 * width, recalls, width, label="Recall")
-    ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
-    ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+        # === Achsen und Beschriftung ===
+        ax.set_title(f"Modellvergleich ({test_type})")
+        ax.set_xticks(x)
+        ax.set_xticklabels(m, rotation=90, )
+        ax.yaxis.set_major_locator(plt.MultipleLocator(20))
+        ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+        ax.set_axisbelow(True)  # Linien hinter die Balken
+        plt.tight_layout()
 
-    ax.set_title(f"Modellvergleich ({test_type}) – sortiert nach {sort_metric}")
-    ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=45)
-    ax.legend()
-    plt.tight_layout()
+        plt.show()
+    else:
+        x = np.arange(len(models))
+        width = 0.15
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
+        ax.bar(x - 0.5 * width, precisions, width, label="Precision")
+        ax.bar(x + 0.5 * width, recalls, width, label="Recall")
+        ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+        ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+
+        # === Achsen und Beschriftung ===
+        ax.set_title(f"Modellvergleich ({test_type})")
+        ax.set_xticks(x)
+        ax.set_xticklabels(models, rotation=90)
+        ax.set_ylim(0, 1.0)
+        ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+        ax.set_axisbelow(True)  # Linien hinter die Balken
+        ax.legend(ncol=2, fontsize=10, loc="lower right")
+        plt.tight_layout()
+
+        # === Speichern und Anzeigen ===
+        plt.show()
 
     st.pyplot(fig)
 

@@ -438,10 +438,10 @@ def get_robustness_plot():
             df = pd.read_csv(file)
 
             # Standard-Baseline bestimmen
-            if "known" in variante:
-                base_name = "known_test_dir"
-            else:
+            if "unknown" in variante and variante != "unknown_test_dir":
                 base_name = "unknown_test_dir"
+            else:
+                base_name = "known_test_dir"
 
             base_row = df.loc[df["TestVariante"] == base_name]
             var_row = df.loc[df["TestVariante"] == variante]
@@ -512,9 +512,91 @@ def get_robustness_plot():
 
         print(f"✅ Robustness Comparison Plot gespeichert unter: {output_path}")
 
+def get_zusammenfassungs_plot():
+    OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "test_comparison")
+    LOG_DIR = os.path.join(PROJECT_ROOT, "logs", "test")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # === Daten sammeln ===
+    data = []
+
+    for model in ALL_MODELS:
+        sums = {
+                "Accuracy": 0.0,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1-Score": 0.0,
+                "ROC-AUC": 0.0,
+        }
+        count = 0
+
+        file = os.path.join(LOG_DIR, f"{model}_metrics.csv")
+        df = pd.read_csv(file)
+
+        for variante in TEST_VARIANTEN:
+            if variante in ["known_test_insertion", "unknown_test_insertion"]:
+                continue
+
+            row = df.loc[df["TestVariante"] == variante]
+            if row.empty:
+                continue
+
+            for metric in sums:
+                sums[metric] += row[metric].iloc[0]
+
+            count += 1
+
+        if count == 0:
+            continue
+
+        data.append({
+            "Model": model,
+            **{metric: value / count for metric, value in sums.items()}
+        })
+
+    data = sorted(data, key=lambda x: x["Accuracy"], reverse=True)
+
+    models = [get_model_name(d["Model"]) for d in data]
+
+    accuracies = [d["Accuracy"] for d in data]
+    precisions = [d["Precision"] for d in data]
+    recalls = [d["Recall"] for d in data]
+    f1_scores = [d["F1-Score"] for d in data]
+    roc_aucs = [d["ROC-AUC"] for d in data]
+
+    # === Plot vorbereiten ===
+    x = np.arange(len(models))
+    width = 0.15
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    ax.bar(x - 1.5 * width, accuracies, width, label="Accuracy")
+    ax.bar(x - 0.5 * width, precisions, width, label="Precision")
+    ax.bar(x + 0.5 * width, recalls, width, label="Recall")
+    ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
+    ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
+
+    # === Achsen und Beschriftung ===
+    ax.set_title(f"Modellvergleich (Zusammenfassung)")
+    ax.set_xticks(x)
+    ax.set_xticklabels(models, rotation=90)
+    ax.set_ylim(0, 1.0)
+    ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
+    ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+    ax.set_axisbelow(True)  # Linien hinter die Balken
+    ax.legend(ncol=2, fontsize=10, loc="lower right")
+    plt.tight_layout()
+
+    # === Speichern und Anzeigen ===
+    output_path = os.path.join(OUTPUT_DIR, f"zusammenfassung.svg")
+    plt.savefig(output_path, dpi=300)
+    plt.show()
+    print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
+
 if __name__ == "__main__":
     get_train_plots()
     get_confusion_matrices()
     get_test_plots()
     get_plot_for_poster()
     get_robustness_plot()
+    get_zusammenfassungs_plot()
