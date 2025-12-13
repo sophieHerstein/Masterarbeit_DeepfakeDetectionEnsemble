@@ -252,6 +252,10 @@ def get_model_name(model):
         return "gewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
     if model == "unweighted_meta_classifier_ensemble_diverse":
         return "ungewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
+    if model == "not_specialized_ensemble":
+        return "nicht spezialisiertes Ensemble"
+    if model == "not_specialized_meta_classifier_ensemble":
+        return "nicht spezialisiertes Ensemble \nmit Meta Classifier"
     return "NOT FOUND"
 
 
@@ -509,8 +513,8 @@ def get_robustness_plot():
         print(f"✅ Robustness Comparison Plot gespeichert unter: {output_path}")
 
 if __name__ == "__main__":
-    # get_train_plots()
+    get_train_plots()
     get_confusion_matrices()
-    # get_test_plots()
-    # get_plot_for_poster()
-    # get_robustness_plot()
+    get_test_plots()
+    get_plot_for_poster()
+    get_robustness_plot()
