@@ -1,0 +1,19 @@
+Modell,TestVariante,Accuracy,Precision,Recall,F1-Score,ROC-AUC,TP,TN,FP,FN,Avg-Time/Bild (s)
+unweighted_meta_classifier_ensemble_diverse,known_test_dir,0.9698,0.9639,0.9762,0.9700,0.9966,615,607,23,15,0.409361
+unweighted_meta_classifier_ensemble_diverse,unknown_test_dir,0.7739,0.7268,0.8778,0.7952,0.8843,790,603,297,110,0.420637
+unweighted_meta_classifier_ensemble_diverse,known_test_jpeg_dir,0.9349,0.9029,0.9746,0.9374,0.9863,614,564,66,16,0.388145
+unweighted_meta_classifier_ensemble_diverse,unknown_test_jpeg_dir,0.6572,0.6146,0.8433,0.7110,0.7103,759,424,476,141,0.402948
+unweighted_meta_classifier_ensemble_diverse,known_test_noisy_dir,0.8627,0.9147,0.8000,0.8535,0.9502,504,583,47,126,0.393438
+unweighted_meta_classifier_ensemble_diverse,unknown_test_noisy_dir,0.6728,0.6585,0.7178,0.6869,0.7284,646,565,335,254,0.409916
+unweighted_meta_classifier_ensemble_diverse,known_test_scaled_dir,0.8944,0.8418,0.9714,0.9020,0.9729,612,515,115,18,0.386751
+unweighted_meta_classifier_ensemble_diverse,unknown_test_scaled_dir,0.6011,0.5653,0.8756,0.6870,0.6770,788,294,606,112,0.401879
+unweighted_meta_classifier_ensemble_diverse,known_test_occlusion,0.9635,0.9635,0.9635,0.9635,0.9954,607,607,23,23,0.404553
+unweighted_meta_classifier_ensemble_diverse,unknown_test_occlusion,0.7600,0.7229,0.8433,0.7785,0.8747,759,609,291,141,0.415720
+unweighted_meta_classifier_ensemble_diverse,known_test_insertion,0.9235,0.0000,0.0000,0.0000,nan,0,169,14,0,0.417196
+unweighted_meta_classifier_ensemble_diverse,unknown_test_insertion,0.6679,0.0000,0.0000,0.0000,nan,0,187,93,0,0.397603
+unweighted_meta_classifier_ensemble_diverse,known_test_format_png,0.9698,0.9639,0.9762,0.9700,0.9966,615,607,23,15,0.440668
+unweighted_meta_classifier_ensemble_diverse,unknown_test_format_png,0.7739,0.7268,0.8778,0.7952,0.8843,790,603,297,110,0.478141
+unweighted_meta_classifier_ensemble_diverse,known_test_format_webp,0.9627,0.9533,0.9730,0.9631,0.9948,613,600,30,17,0.445413
+unweighted_meta_classifier_ensemble_diverse,unknown_test_format_webp,0.7194,0.6658,0.8811,0.7585,0.8042,793,502,398,107,0.477963
+unweighted_meta_classifier_ensemble_diverse,known_test_histogram,0.9635,0.9620,0.9651,0.9635,0.9955,608,606,24,22,0.408167
+unweighted_meta_classifier_ensemble_diverse,unknown_test_histogram,0.7644,0.7204,0.8644,0.7859,0.8828,778,598,302,122,0.417102
