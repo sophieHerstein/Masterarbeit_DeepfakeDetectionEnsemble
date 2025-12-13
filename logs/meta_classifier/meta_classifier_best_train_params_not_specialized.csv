@@ -1,0 +1,7 @@
+model,all_table_keys,meta_values,score,params
+RFC,False,True,0.8773148148148149,"{'bootstrap': True, 'max_depth': 10, 'max_features': 'sqrt', 'min_samples_leaf': 2, 'min_samples_split': 5, 'n_estimators': 300, 'oob_score': True}"
+LR,False,True,0.8569444444444445,"{'C': 0.1, 'class_weight': 'balanced', 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+GBC,False,True,0.875,"{'learning_rate': 0.05, 'max_depth': 2, 'n_estimators': 200, 'subsample': 0.7}"
+RFC,False,False,0.8805555555555555,"{'bootstrap': True, 'max_depth': 20, 'max_features': 'sqrt', 'min_samples_leaf': 2, 'min_samples_split': 2, 'n_estimators': 100, 'oob_score': True}"
+LR,False,False,0.861111111111111,"{'C': 1, 'class_weight': None, 'max_iter': 100, 'penalty': 'l2', 'solver': 'newton-cg'}"
+GBC,False,False,0.8777777777777779,"{'learning_rate': 0.05, 'max_depth': 3, 'n_estimators': 100, 'subsample': 1.0}"

@@ -294,17 +294,18 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
         # test_model("RFC", rfc_model, X_noisy_test, y_noisy_test, filename_noisy, all_table_keys, meta_values)
     else:
         bootstrap = True
-        max_depth = 10
         max_features = 'sqrt'
         min_samples_leaf = 2
         oob_score = True
+        n_estimators = 100
 
         if meta_type == "not_specialized":
+            max_depth = 20
             min_samples_split = 2
-            n_estimators = 300
+
         else:
+            max_depth = 10
             min_samples_split = 5
-            n_estimators = 100
 
         rfc_model = RandomForestClassifier(random_state=1, bootstrap=bootstrap, max_depth=max_depth, max_features=max_features, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators, oob_score=oob_score)
         rfc_model.fit(X_train, y_train)
@@ -462,7 +463,6 @@ def test_meta_classifier():
 if __name__ == '__main__':
     # get_train_images_for_robustheit()
     # for t in ["base", "diverse", "not_specialized"]:
-    # for t in ["diverse", "not_specialized"]:
     #     test_for_best_classifier_train_data(False, True, t)
     #     test_for_best_classifier_train_data(False, False, t)
     #     if t == "not_specialized":
@@ -471,8 +471,8 @@ if __name__ == '__main__':
     #     test_for_best_classifier_train_data(True, False, t)
     # use_data_from_test_for_train_and_train_model(True, True, "base")
     # use_data_from_test_for_train_and_train_model(False, True, "base")
-    use_data_from_test_for_train_and_train_model(True, False, "diverse")
-    use_data_from_test_for_train_and_train_model(False, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(True, False, "diverse")
+    # use_data_from_test_for_train_and_train_model(False, False, "diverse")
     use_data_from_test_for_train_and_train_model(False, False, "not_specialized")
     # remove_train_images_from_test_for_ensemble_images()
     # test_meta_classifier()
