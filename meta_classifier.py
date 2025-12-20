@@ -321,7 +321,7 @@ def use_data_from_test_for_train_and_train_model(all_table_keys, meta_values, me
 
 
 def remove_train_images_from_test_for_ensemble_images():
-    csv_path = "../../logs/meta_classifier/train/train_meta_base.csv"
+    csv_path = "logs/meta_classifier/train/train_meta_base.csv"
     df = pd.read_csv(csv_path)
 
     target_root = "../data/test/meta_classifier_train_data"
@@ -381,7 +381,7 @@ def get_relative_subpath(path: str) -> Path:
 
 def get_train_images_for_robustheit():
 
-    base = pd.read_csv("../../logs/meta_classifier/train/train_meta_base.csv")
+    base = pd.read_csv("logs/meta_classifier/train/train_meta_base.csv")
     base["img_norm"] = base["img"].apply(normalize)
     base["img_id"] = base["img_norm"].apply(extract_base_id)
 
@@ -455,7 +455,7 @@ def get_train_images_for_robustheit():
 
 def test_meta_classifier():
     lr_model = pickle.load(open('../../checkpoints/meta_classifier_for_ensemble_base_with_weights.pkl', 'rb'))
-    test_data = pd.read_csv("../../logs/meta_classifier/test_data/base/test_meta.csv")
+    test_data = pd.read_csv("logs/meta_classifier/test_data/base/test_meta.csv")
     test_data = test_data.drop(['img', 'label'], axis=1)
     predictions = lr_model.predict_proba(test_data)
     print(predictions[0][1])
