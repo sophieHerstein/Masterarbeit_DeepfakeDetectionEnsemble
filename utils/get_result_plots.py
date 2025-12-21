@@ -58,7 +58,8 @@ def get_train_plots():
             # Hauptplot
             sns.lineplot(
                 data=df_subset,
-                x="Epoche",                    y=metric,
+                x="Epoche",
+                y=metric,
                 hue="Modell",
                 marker="o",
                 linewidth=2
@@ -91,11 +92,11 @@ def get_train_plots():
                 plt.plot([x_max, x_max], [df_subset[metric].min(), y_max], linestyle="--", alpha=0.4, color=line_color)
                 plt.plot([df_subset["Epoche"].min(), x_max], [y_max, y_max], linestyle="--", alpha=0.4, color=line_color)
             # === Plot-Style ===
-            plt.title(f"{metric} über Epochen – {variante}")
+            plt.title(f"Validation Accuracy über Epochen – {get_category(variante)}")
             max_epoch = df_subset["Epoche"].max()
             plt.xticks(range(0, max_epoch + 1, 2))
-            plt.xlabel("Epoche")
-            plt.ylabel(metric)
+            plt.xlabel("Epochen")
+            plt.ylabel("Validation Accuracy")
             plt.grid(True, linestyle="--", alpha=0.6)
             plt.tight_layout()
 
@@ -181,7 +182,7 @@ def get_test_plots():
             ax.bar(x, tp, width, label="True Positives")
 
             # === Achsen und Beschriftung ===
-            ax.set_title(f"Modellvergleich ({variante})")
+            ax.set_title(f"Modellvergleich ({get_variante(variante)})")
             ax.set_xticks(x)
             ax.set_xticklabels(models, rotation=90, )
             ax.yaxis.set_major_locator(plt.MultipleLocator(20))
@@ -207,7 +208,7 @@ def get_test_plots():
             ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
 
             # === Achsen und Beschriftung ===
-            ax.set_title(f"Modellvergleich ({variante})")
+            ax.set_title(f"Modellvergleich ({get_variante(variante)})")
             ax.set_xticks(x)
             ax.set_xticklabels(models, rotation=90)
             ax.set_ylim(0, 1.0)
@@ -258,6 +259,62 @@ def get_model_name(model):
         return "nicht spezialisiertes Ensemble \nmit Meta Classifier"
     return "NOT FOUND"
 
+
+def get_category(category):
+    if category == "human":
+        return "Mensch"
+    elif category == "building":
+        return "Gebäude"
+    elif category == "landscape":
+        return "Landschaft"
+    elif category == "frequencies":
+        return "Frequenz"
+    elif category == "edges":
+        return "Kanten"
+    elif category == "grayscaling":
+        return "Graustufen"
+    elif category == "single_models":
+        return "Einzelmodelle"
+    return "UNKNOWN"
+
+def get_variante(variante):
+    if variante == "known_test_dir":
+        return "bekannte Testdaten"
+    elif variante == "unknown_test_dir":
+        return "unbekannte Testdaten"
+    elif variante == "known_test_jpeg_dir":
+        return "komprimierte bekannte Testdaten"
+    elif variante == "unknown_test_jpeg_dir":
+        return "komprimierte unbekannte Testdaten"
+    elif variante == "known_test_noisy_dir":
+        return "verrauschte bekannte Testdaten"
+    elif variante == "unknown_test_noisy_dir":
+        return "verrauschte unbekannte Testdaten"
+    elif variante == "known_test_scaled_dir":
+        return "skalierte bekannte Testdaten"
+    elif variante == "unknown_test_scaled_dir":
+        return "skalierte unbekannte Testdaten"
+    elif variante == "known_test_occlusion":
+        return "verdeckte Bildbereiche bekannter Testdaten"
+    elif variante == "unknown_test_occlusion":
+        return "verdeckte Bildbereiche unbekannter Testdaten"
+    elif variante == "known_test_insertion":
+        return "Fake in Real Bild eingesetzt bekannte Testdaten"
+    elif variante == "unknown_test_insertion":
+        return "Fake in Real Bild eingesetzt unbekannte Testdaten"
+    elif variante == "known_test_format_png":
+        return "PNG-Dateien bekannte Testdaten"
+    elif variante == "unknown_test_format_png":
+        return "PNG-Dateien unbekannte Testdaten"
+    elif variante == "known_test_format_webp":
+        return "WEBP-Dateien bekannte Testdaten"
+    elif variante == "unknown_test_format_webp":
+        return "WEBP-Dateien unbekannte Testdaten"
+    elif variante == "known_test_histogram":
+        return "Histogrammveränderungen bekannter Testdaten"
+    elif variante == "unknown_test_histogram":
+        return "Histogrammveränderungen unbekannter Testdaten"
+    return "UNKNOWN"
 
 def load_acc(model, variante):
     OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "poster")
@@ -496,7 +553,7 @@ def get_robustness_plot():
         ax.axhline(0, color='black', linestyle='--', linewidth=1)
 
         # Achsen / Formatierung
-        ax.set_title(f"Robustness Comparison (Δ vs. Standard) – {variante}")
+        ax.set_title(f"Robustheitsvergleich (Delta zum Standard) – {get_variante(variante)}")
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=90)
         ax.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
@@ -594,9 +651,9 @@ def get_zusammenfassungs_plot():
     print(f"✅ Vergleichsplot gespeichert unter: {output_path}")
 
 if __name__ == "__main__":
-    get_train_plots()
-    get_confusion_matrices()
+    # get_train_plots()
+    # get_confusion_matrices()
     get_test_plots()
-    get_plot_for_poster()
+    # get_plot_for_poster()
     get_robustness_plot()
     get_zusammenfassungs_plot()
