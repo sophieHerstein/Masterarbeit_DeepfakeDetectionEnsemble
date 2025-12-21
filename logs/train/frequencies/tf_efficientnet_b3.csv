@@ -1,4 +1,4 @@
-1,Epoche,Train-Acc,Val-Acc,Loss,Epoch-Zeit (s)
+Epoche,Train-Acc,Val-Acc,Loss,Epoch-Zeit (s)
 1,79.50,88.06,337.4609,78.22
 2,91.91,89.72,118.6228,78.49
 3,94.62,91.33,78.7688,78.73
