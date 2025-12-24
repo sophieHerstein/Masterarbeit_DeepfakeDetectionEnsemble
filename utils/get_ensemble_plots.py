@@ -44,7 +44,7 @@ def get_plots_for_klassentrennung(ensembles, test_dir):
         print(f"✅ Plot Trennung der Klassen gespeichert unter: {output_path}")
 
 
-def get_plots_for_native_model_errors(test_dir):
+def get_plots_for_native_model_errors_categories(test_dir):
     CATEGORY_TO_MODEL = {
         "human": "p_human",
         "building": "p_building",
@@ -94,7 +94,55 @@ def get_plots_for_native_model_errors(test_dir):
     plt.savefig(output_path)
     plt.show()
 
-    print(f"✅ Plot FP/FN gestapelt gespeichert unter: {output_path}")
+    print(f"✅ Plot FP/FN Category gestapelt gespeichert unter: {output_path}")
+
+
+def get_plots_for_native_model_errors_bildinhalt(test_dir):
+    MODELS = [
+        "p_edges",
+        "p_frequency",
+        "p_grayscale"
+    ]
+
+    df = load_ensemble_results("unweighted_ensemble", test_dir)
+    if df is None:
+        print(f"❌ Plot nicht möglich für unweighted_ensemble")
+
+    fp_counts = []
+    fn_counts = []
+
+    for col in MODELS:
+
+        pred = (df[col].astype(float) >= 0.5).astype(int)
+        label = df["label"].astype(int)
+
+        fp = ((pred == 1) & (label == 0)).sum()
+        fn = ((pred == 0) & (label == 1)).sum()
+
+        fp_counts.append(int(fp))
+        fn_counts.append(int(fn))
+
+    x = np.arange(len(MODELS))
+    width = 0.6
+
+    plt.figure()
+    plt.bar(x, fp_counts, width, label="False Positives")
+    plt.bar(x, fn_counts, width, bottom=fp_counts, label="False Negatives")
+
+    plt.xticks(x, ["Kanten", "Frequenz", "Graustufen"])
+    plt.ylabel("Anzahl Fehlklassifikationen")
+    plt.title("FP/FN der Bildinhalt-Classifier")
+    plt.legend()
+
+    output_path = os.path.join(
+        OUTPUT_DIR,
+            f"{test_dir}_bildinhalt_fp_fn_stacked.svg"
+        )
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.show()
+
+    print(f"✅ Plot FP/FN Bildinhalt gestapelt gespeichert unter: {output_path}")
 
 
 if __name__ == "__main__":
@@ -102,5 +150,7 @@ if __name__ == "__main__":
     # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
     # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble", "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
     # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble", "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
-    get_plots_for_native_model_errors("unknown_test_noisy_dir")
-    get_plots_for_native_model_errors("unknown_test_jpeg_dir")
+    # get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
+    # get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
