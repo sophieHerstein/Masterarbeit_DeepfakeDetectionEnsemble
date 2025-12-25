@@ -144,6 +144,59 @@ def get_plots_for_native_model_errors_bildinhalt(test_dir):
 
     print(f"✅ Plot FP/FN Bildinhalt gestapelt gespeichert unter: {output_path}")
 
+def get_plots_for_weights(test_dir):
+    CATEGORY_TO_MODEL = {
+        "human": "w_human",
+        "building": "w_building",
+        "landscape": "w_landscape",
+    }
+
+    df = load_ensemble_results("weighted_ensemble", test_dir)
+    if df is None:
+        print(f"❌ Plot nicht möglich für weighted_ensemble")
+
+    weight_cols = list(CATEGORY_TO_MODEL.values())
+    label_map = {v: k for k, v in CATEGORY_TO_MODEL.items()}
+
+    df["predicted_category"] = (
+        df[weight_cols]
+        .astype(float)
+        .idxmax(axis=1)
+        .map(label_map)
+    )
+
+    conf_matrix = pd.crosstab(
+        df["category"],
+        df["predicted_category"],
+        rownames=["Kategorie"],
+        colnames=["vorhergesagte Kategorie"]
+    )
+
+    plt.figure(figsize=(6, 5))
+    plt.imshow(conf_matrix, cmap="Blues")
+
+    plt.xticks(range(len(conf_matrix.columns)), conf_matrix.columns)
+    plt.yticks(range(len(conf_matrix.index)), conf_matrix.index)
+    plt.xlabel(conf_matrix.columns.name)
+    plt.ylabel(conf_matrix.index.name)
+    for i in range(len(conf_matrix.index)):
+        for j in range(len(conf_matrix.columns)):
+            plt.text(j, i, conf_matrix.iloc[i, j],
+                     ha="center", va="center", color="black")
+
+    plt.colorbar(label="Anzahl Bilder")
+    plt.title("Inhaltsklassifikation – Kategorienverwechslungen")
+
+    output_path = os.path.join(
+        OUTPUT_DIR,
+            f"{test_dir}_wrong_weights.svg"
+        )
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.show()
+
+    print(f"✅ Plot Falschklassifikationen des Inhalts Classifie gespeichert unter: {output_path}")
+
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -152,5 +205,7 @@ if __name__ == "__main__":
     # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble", "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
     # get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
     # get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
-    get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
-    get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
+    # get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
+    # get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
+    get_plots_for_weights("unknown_test_noisy_dir")
+    get_plots_for_weights("unknown_test_jpeg_dir")
