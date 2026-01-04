@@ -48,6 +48,32 @@ class Ensemble:
                 with open(ckpt_path, 'rb') as file:
                     self.meta_classifier = pickle.load(file)
 
+        self.quality_stats = None
+        self.category_ckpt = None
+        self.category_model = None
+        self.category_transform = None
+        if self.weighted:
+            with open(CONFIG['quality_stats_path'], "r") as f:
+                self.quality_stats = json.load(f)
+
+            ckpt_path = CONFIG["checkpoint_classifier_dir"]
+            ckpt = torch.load(ckpt_path, map_location="cpu")
+
+            self.category_ckpt = ckpt
+            self.category_model = MiniCNN(
+                num_classes=len(ckpt["classes"]),
+                img_size=ckpt["img_size"],
+                filters=tuple(ckpt["filters"]),
+                dense=ckpt["dense"],
+                dropout=ckpt["dropout"]
+            )
+            self.category_model.load_state_dict(ckpt["model_state"])
+            self.category_model.eval()
+
+            self.category_transform = transforms.Compose([
+                transforms.Resize((ckpt["img_size"], ckpt["img_size"])),
+                transforms.ToTensor(),
+            ])
 
         if self.diverse:
             self.models = {
@@ -207,54 +233,31 @@ class Ensemble:
 
 
     def _get_quality_weight(self, img):
+        if self.quality_stats is None:
+            raise RuntimeError("Quality stats not initialized. weighted=False?")
+
         gray = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
         # Beispielhafte Statistikwerte (mu, sigma, tau) – normalerweise aus Datensatz berechnet
         # JSON mit Stats laden (muss vorher mit compute_stats.py erzeugt worden sein)
-        with open(CONFIG['quality_stats_path'], "r") as f:
-            stats = json.load(f)
-
         # Qualitätsvektor berechnen
-        q = self._quality_vector(gray, stats)
+        q = self._quality_vector(gray, self.quality_stats)
 
         # Gewichte berechnen
         w = self._ensemble_weights(q)
         return w
 
     def _get_category_weights(self, img):
-        ckpt_path = CONFIG["checkpoint_classifier_dir"]
+        if self.category_model is None or self.category_transform is None:
+            raise RuntimeError("Category model not initialized. weighted=False?")
 
-        # Laden des Checkpoints
-        ckpt = torch.load(ckpt_path, map_location="cpu")
-
-        # Modell erstellen
-        model = MiniCNN(
-            num_classes=len(ckpt["classes"]),
-            img_size=ckpt["img_size"],
-            filters=tuple(ckpt["filters"]),
-            dense=ckpt["dense"],
-            dropout=ckpt["dropout"]
-        )
-
-        # Gewichte laden
-        model.load_state_dict(ckpt["model_state"])
-        model.eval()
-
-        transform = transforms.Compose([
-            transforms.Resize((ckpt["img_size"], ckpt["img_size"])),
-            transforms.ToTensor(),
-        ])
-
-        # Bild laden
         image = cv2.imread(img)[:, :, ::-1]  # BGR -> RGB
-        img_tensor = transform(Image.fromarray(image)).unsqueeze(0)  # [1,3,H,W]
+        img_tensor = self.category_transform(Image.fromarray(image)).unsqueeze(0)  # [1,3,H,W]
 
         with torch.no_grad():
-            logits = model(img_tensor)
-            probs = torch.softmax(logits, dim=1)  # [1,num_classes]
-            pred_class = probs.argmax(1).item()
-            pred_label = ckpt["classes"][pred_class]
+            logits = self.category_model(img_tensor)
+            probs = torch.softmax(logits, dim=1)
 
-        classes = ckpt["classes"]
+        classes = self.category_ckpt["classes"]
 
         # Batch-Dimension wegnehmen
         return {cls: float(p) for cls, p in zip(classes, probs[0].tolist())}
