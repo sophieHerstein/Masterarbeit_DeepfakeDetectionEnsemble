@@ -1,6 +1,6 @@
 import os
-import shutil
 import random
+import shutil
 
 from config import CONFIG, CATEGORIES
 
@@ -10,46 +10,6 @@ SUBSETS = ["train", "val", "test"]
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 RNG = random.Random(42)
-
-# building\
-#     manipulated\
-#         sd2\ -350- -> 250/50/50
-#         sd15\ -350- -> 250/50/50
-#         sd\ -350- -> 250/50/50
-#     realistic\
-#         architecture\ -2100- -> 1500/300/300
-#     synthetic\
-#         dreamlike\ -350- -> 250/50/50
-#         juggernaut\ -350- -> 250/50/50
-#         sd\ -350- -> 250/50/50
-# human\
-#     manipulated\
-#         sd2\ -175-
-#         sd15\ -175-
-#         sd\ -175-
-#     realistic\
-#         celeba\ -1050- -> 750/150/150
-#         faceforensics\ -1050- -> 750/150/150
-#     synthetic\
-#         dreamlike\ -350- -> 250/50/50
-#         juggernaut\ -350- -> 250/50/50
-#         sd\ -350- -> 250/50/50
-# human_2\
-#     manipulated\
-#         sd2\ -175-
-#         sd15\ -175-
-#         sd\ -175-
-# landscape\
-#     manipulated\
-#         sd2\ -350- -> 250/50/50
-#         sd15\ -350- -> 250/50/50
-#         sd\ -350- -> 250/50/50
-#     realistic\
-#         lhq\ -2100- -> 1500/300/300
-#     synthetic\
-#         dreamlike\ -350- -> 250/50/50
-#         juggernaut\ -350- -> 250/50/50
-#         sd\ -350- -> 250/50/50
 
 TRAIN_FOR_350 = 250
 TEST_AND_VAL_FOR_350 = 50
@@ -224,7 +184,6 @@ def shuffle_files(files):
 if __name__ == "__main__":
     output_root = os.path.join(PROJECT_ROOT, CONFIG["splited_images_path"])
 
-    # Ausgabeordner vorbereiten
     for subset in SUBSETS:
         for cat in CATEGORIES:
             for label in ["real", "fake"]:

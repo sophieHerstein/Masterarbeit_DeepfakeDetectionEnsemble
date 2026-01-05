@@ -5,17 +5,15 @@ import cv2
 
 RNG = random.Random(42)
 
-# Parameter
 frames_per_video = 1
 video_format = ".mp4"
 image_format = ".jpg"
 
-# Quelle und Zielverzeichnisse
 source_path = "../data_raw/faceforensics/"
 
 output_path = "../images/known/human/realistic/faceforensics"
 
-# Funktion zur Frame-Extraktion
+
 def extract_frames(video, output_dir, i):
     cap = cv2.VideoCapture(video)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -24,10 +22,8 @@ def extract_frames(video, output_dir, i):
         cap.release()
         return
 
-    # Zufällige Frame-Nummer ziehen
     frame_number = RNG.randint(0, total_frames - 1)
 
-    # Frame setzen und lesen
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
     ret, frame = cap.read()
     if ret:
@@ -35,8 +31,6 @@ def extract_frames(video, output_dir, i):
         cv2.imwrite(os.path.join(output_dir, filename), frame)
 
     cap.release()
-
-
 
 
 video_files = [f for f in os.listdir(source_path) if f.endswith(video_format)]

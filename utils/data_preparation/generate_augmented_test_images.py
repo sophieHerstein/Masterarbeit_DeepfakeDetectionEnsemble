@@ -1,8 +1,9 @@
 import os
-from PIL import Image
+
 import numpy as np
-from tqdm import tqdm
+from PIL import Image
 from config import TRAININGS_VARIANTEN, CONFIG
+from tqdm import tqdm
 
 jpeg_quality = 50
 gaussian_noise_stddev = 25
@@ -17,12 +18,14 @@ def apply_jpeg_compression(image: Image.Image, quality: int) -> Image.Image:
         image.save(f, "JPEG", quality=quality)
     return Image.open("temp.jpg")
 
+
 def apply_gaussian_noise(image: Image.Image, stddev: float) -> Image.Image:
     print("\nApplying Gaussian noise...")
     arr = np.array(image).astype(np.float32)
     noise = np.random.normal(0, stddev, arr.shape).astype(np.float32)
     noisy = np.clip(arr + noise, 0, 255).astype(np.uint8)
     return Image.fromarray(noisy)
+
 
 def apply_scaling(image: Image.Image, factor: float) -> Image.Image:
     print("\nApplying scaling...")
@@ -31,6 +34,7 @@ def apply_scaling(image: Image.Image, factor: float) -> Image.Image:
     scaled_down = image.resize(scaled_size, Image.BICUBIC)
     scaled_up = scaled_down.resize(original_size, Image.BICUBIC)
     return scaled_up
+
 
 def process_images(original_root, output_root_jpeg, output_root_noisy, output_root_scaled):
     for root, _, files in os.walk(original_root):
@@ -52,29 +56,28 @@ def process_images(original_root, output_root_jpeg, output_root_noisy, output_ro
 
                 base_name = os.path.splitext(file)[0]
 
-                # 1. JPEG-Kompression
                 jpeg_image = apply_jpeg_compression(image, jpeg_quality)
                 jpeg_image.save(os.path.join(out_dir_jpeg, f"{base_name}_jpeg.jpg"))
 
-                # 2. Rauschen
                 noisy_image = apply_gaussian_noise(image, gaussian_noise_stddev)
                 noisy_image.save(os.path.join(out_dir_noisy, f"{base_name}_noisy.jpg"))
 
-                # 3. Skalierung
                 scaled_image = apply_scaling(image, scaling_factor)
                 scaled_image.save(os.path.join(out_dir_scaled, f"{base_name}_scaled.jpg"))
 
             except Exception as e:
                 print(f"Fehler bei Datei {in_path}: {e}")
 
+
 if __name__ == "__main__":
-        original_known_root = os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'])
-        output_known_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['known_test_jpeg_dir'])
-        output_known_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['known_test_noisy_dir'])
-        output_known_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['known_test_scaled_dir'])
-        process_images(original_known_root, output_known_root_jpeg, output_known_root_noisy, output_known_root_scaled)
-        original_unknown_root = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'])
-        output_unknown_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_jpeg_dir'])
-        output_unknown_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_noisy_dir'])
-        output_unknown_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_scaled_dir'])
-        process_images(original_unknown_root, output_unknown_root_jpeg, output_unknown_root_noisy, output_unknown_root_scaled)
+    original_known_root = os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'])
+    output_known_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['known_test_jpeg_dir'])
+    output_known_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['known_test_noisy_dir'])
+    output_known_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['known_test_scaled_dir'])
+    process_images(original_known_root, output_known_root_jpeg, output_known_root_noisy, output_known_root_scaled)
+    original_unknown_root = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'])
+    output_unknown_root_jpeg = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_jpeg_dir'])
+    output_unknown_root_noisy = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_noisy_dir'])
+    output_unknown_root_scaled = os.path.join(PROJECT_ROOT, CONFIG['unknown_test_scaled_dir'])
+    process_images(original_unknown_root, output_unknown_root_jpeg, output_unknown_root_noisy,
+                   output_unknown_root_scaled)

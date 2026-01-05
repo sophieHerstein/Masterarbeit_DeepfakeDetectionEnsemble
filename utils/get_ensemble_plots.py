@@ -1,18 +1,16 @@
 import os
-from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import pandas as pd
 
-from utils.config import TRAININGS_VARIANTEN, TEST_VARIANTEN, ALL_MODELS
 from utils.get_result_plots import get_model_name
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "plots", "ensemble_results")
 p_cols = ['p_human', 'p_landscape', 'p_building', 'p_edges', 'p_frequency', 'p_grayscale']
 w_cols = ['w_human', 'w_landscape', 'w_building', 'w_edges', 'w_frequency', 'w_grayscale']
+
 
 def load_ensemble_results(ensemble_type, test_type):
     path = f"logs/test/ensemble/extra_column/{ensemble_type}_{test_type}_details.csv"
@@ -88,8 +86,8 @@ def get_plots_for_native_model_errors_categories(test_dir):
 
     output_path = os.path.join(
         OUTPUT_DIR,
-            f"{test_dir}_kategorie_native_fp_fn_stacked.svg"
-        )
+        f"{test_dir}_kategorie_native_fp_fn_stacked.svg"
+    )
     plt.tight_layout()
     plt.savefig(output_path)
     plt.show()
@@ -112,7 +110,6 @@ def get_plots_for_native_model_errors_bildinhalt(test_dir):
     fn_counts = []
 
     for col in MODELS:
-
         pred = (df[col].astype(float) >= 0.5).astype(int)
         label = df["label"].astype(int)
 
@@ -136,13 +133,14 @@ def get_plots_for_native_model_errors_bildinhalt(test_dir):
 
     output_path = os.path.join(
         OUTPUT_DIR,
-            f"{test_dir}_bildinhalt_fp_fn_stacked.svg"
-        )
+        f"{test_dir}_bildinhalt_fp_fn_stacked.svg"
+    )
     plt.tight_layout()
     plt.savefig(output_path)
     plt.show()
 
     print(f"✅ Plot FP/FN Bildinhalt gestapelt gespeichert unter: {output_path}")
+
 
 def get_plots_for_weights(test_dir):
     CATEGORY_TO_MODEL = {
@@ -189,8 +187,8 @@ def get_plots_for_weights(test_dir):
 
     output_path = os.path.join(
         OUTPUT_DIR,
-            f"{test_dir}_wrong_weights.svg"
-        )
+        f"{test_dir}_wrong_weights.svg"
+    )
     plt.tight_layout()
     plt.savefig(output_path)
     plt.show()
@@ -200,12 +198,14 @@ def get_plots_for_weights(test_dir):
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble", "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble", "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
-    # get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+                                   "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+                                   "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
     get_plots_for_weights("unknown_test_noisy_dir")
     get_plots_for_weights("unknown_test_jpeg_dir")

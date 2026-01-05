@@ -1,17 +1,16 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
 import os
-import seaborn as sns
+
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
+import seaborn as sns
+import streamlit as st
 
 from config import TRAININGS_VARIANTEN, TEST_VARIANTEN, ALL_MODELS
 
 st.set_page_config(page_title="Masterarbeit Deepfake Detection Ensemble Model Dashboard", layout="wide")
 
-
-# === Helper Functions ===
 
 @st.cache_data
 def load_summary(train_type):
@@ -34,11 +33,13 @@ def load_test_results(model):
         return pd.read_csv(path)
     return None
 
+
 def load_ensemble_results(model, test_dir):
     path = f"logs/test/ensemble/{model}_{test_dir}_details.csv"
     if os.path.exists(path):
         return pd.read_csv(path)
     return None
+
 
 def plot_line_chart(df, x, y, title):
     fig, ax = plt.subplots()
@@ -59,6 +60,7 @@ def plot_confusionmatrix(df):
     ax.set_ylabel("Actual")
     ax.set_title("Confusion Matrix")
     st.pyplot(fig)
+
 
 def plot_grouped_bar_chart(delta_df, title):
     if delta_df is None or delta_df.empty:
@@ -84,6 +86,7 @@ def plot_grouped_bar_chart(delta_df, title):
 
     st.plotly_chart(fig, use_container_width=True)
 
+
 def compute_deltas(model):
     variations = ["jpeg", "noisy", "scaled"]
     metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
@@ -94,7 +97,6 @@ def compute_deltas(model):
 
     df_model = df[df["Modell"] == model]
 
-    # Basiszeilen (Standardtests)
     base_known = df_model[df_model["TestVariante"] == "known_test_dir"]
     base_unknown = df_model[df_model["TestVariante"] == "unknown_test_dir"]
 
@@ -104,25 +106,20 @@ def compute_deltas(model):
     base_known = base_known.iloc[0]
     base_unknown = base_unknown.iloc[0]
 
-    # Dictionaries für Ergebnisse
     known_deltas = {}
     unknown_deltas = {}
 
-    # Schleife über Varianten
     for var in variations:
-        # Known
         var_known = df_model[df_model["TestVariante"] == f"known_test_{var}_dir"]
         if not var_known.empty:
             var_known = var_known.iloc[0]
             known_deltas[var] = {m: round(var_known[m] - base_known[m], 4) for m in metrics}
 
-        # Unknown
         var_unknown = df_model[df_model["TestVariante"] == f"unknown_test_{var}_dir"]
         if not var_unknown.empty:
             var_unknown = var_unknown.iloc[0]
             unknown_deltas[var] = {m: round(var_unknown[m] - base_unknown[m], 4) for m in metrics}
 
-    # In DataFrames umwandeln
     known_df = pd.DataFrame(known_deltas).T if known_deltas else None
     unknown_df = pd.DataFrame(unknown_deltas).T if unknown_deltas else None
 
@@ -164,7 +161,7 @@ def get_model_name(model):
         return "nicht spezialisiertes Ensemble \nmit Meta Classifier"
     return "NOT FOUND"
 
-# === Sidebar Selection ===
+
 st.sidebar.title("Modellauswahl")
 
 models = ALL_MODELS
@@ -174,12 +171,12 @@ train_types = TRAININGS_VARIANTEN
 test_types = TEST_VARIANTEN
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit", "🏆 Vergleich der Testergebnisse", "🔍 Ensemble Analyse"
+    "📋 Übersicht", "📈 Training", "🧪 Testmetriken", "💪🏼 Robustheit", "🏆 Vergleich der Testergebnisse",
+    "🔍 Ensemble Analyse"
 ])
-# === Übersicht ===
+
 with tab1:
     st.header("📋 Modellübersicht")
-    # === Load Data ===
     if model:
         st.subheader("Trainingszusammenfassung")
         for training_type in train_types:
@@ -190,7 +187,6 @@ with tab1:
     else:
         st.info("Bitte wähle Modell und Trainingsdaten aus der Seitenleiste.")
 
-# === Training ===
 with tab2:
     st.header("📈 Trainingsverlauf")
     training_type = st.selectbox("Trainingstyp", train_types, key="trainingsdaten_tab2") if train_types else None
@@ -205,7 +201,6 @@ with tab2:
     else:
         st.info("Bitte wähle Modell und Trainingsdaten aus.")
 
-# === Testmetriken ===
 with tab3:
     st.header("🧪 Testmetriken")
     test_type = st.selectbox("Testarten", test_types, key="testtypes_tab3") if test_types else None
@@ -229,7 +224,6 @@ with tab3:
     else:
         st.info("Bitte wähle ein Modell aus.")
 
-# === Robustheit ===
 with tab4:
     st.header("🧪 Robustheitsvergleich (Δ Metriken vs. Standard)")
     if model:
@@ -251,11 +245,9 @@ with tab4:
     else:
         st.info("Bitte wähle ein Modell aus.")
 
-# === Vergleich der Testergebnisse ===
 with tab5:
     st.header("🏆 Testergebnisse")
     test_type = st.selectbox("Testarten", test_types, key="testtypes_tab5") if test_types else None
-    # === Daten sammeln ===
     data = []
     for m in ALL_MODELS:
         test_df = load_test_results(m)
@@ -278,14 +270,13 @@ with tab5:
         st.stop()
 
     if test_type not in ["known_test_insertion", "unknown_test_insertion"]:
-        # === Sortier-Option ===
         sort_metric = st.radio(
             "Sortiere nach:",
             ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"],
             horizontal=True,
             key="sort_metric_tab5"
         )
-        # === Sortieren ===
+
         data = sorted(data, key=lambda x: x[sort_metric], reverse=True)
     else:
         data = sorted(data, key=lambda x: x["TP"], reverse=True)
@@ -300,7 +291,6 @@ with tab5:
         f1_scores = [d["F1-Score"] for d in data]
         roc_aucs = [d["ROC-AUC"] for d in data]
 
-    # === Plot vorbereiten ===
     if test_type in ["known_test_insertion", "unknown_test_insertion"]:
         x = np.arange(len(models))
 
@@ -308,13 +298,12 @@ with tab5:
         width = 0.5
         ax.bar(x, tp, width, label="True Positives")
 
-        # === Achsen und Beschriftung ===
         ax.set_title(f"Modellvergleich ({test_type})")
         ax.set_xticks(x)
         ax.set_xticklabels(m, rotation=90, )
         ax.yaxis.set_major_locator(plt.MultipleLocator(20))
         ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
-        ax.set_axisbelow(True)  # Linien hinter die Balken
+        ax.set_axisbelow(True)
         plt.tight_layout()
 
         plt.show()
@@ -330,25 +319,24 @@ with tab5:
         ax.bar(x + 1.5 * width, f1_scores, width, label="F1-Score")
         ax.bar(x + 2.5 * width, roc_aucs, width, label="ROC-AUC")
 
-        # === Achsen und Beschriftung ===
         ax.set_title(f"Modellvergleich ({test_type})")
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=90)
         ax.set_ylim(0, 1.0)
         ax.yaxis.set_major_locator(plt.MultipleLocator(0.1))
         ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
-        ax.set_axisbelow(True)  # Linien hinter die Balken
+        ax.set_axisbelow(True)
         ax.legend(ncol=2, fontsize=10, loc="lower right")
         plt.tight_layout()
 
-        # === Speichern und Anzeigen ===
         plt.show()
 
     st.pyplot(fig)
 
 with tab6:
     st.header("🔍 Ensemble Analyse")
-    if model in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble", "weighted_meta_classifier_ensemble"]:
+    if model in ["weighted_ensemble", "unweighted_ensemble", "unweighted_meta_classifier_ensemble",
+                 "weighted_meta_classifier_ensemble"]:
         test_type = st.selectbox("Testarten", test_types, key="testtypes_tab7") if test_types else None
 
         df = load_ensemble_results(model, test_type)
@@ -401,10 +389,13 @@ with tab6:
         st.text(f"Mean Prob {fp['final_prob'].mean()}")
         st.text(f"Durchschnittliche Anzahl richtiger Modelle {fp['num_of_correct_models'].mean()}")
         st.text(f"Anzahl richtiger identifizierter Real Bilder vom Human Modell {p_human_right_for_not_deepfake}")
-        st.text(f"Anzahl richtiger identifizierter Real Bilder vom Landscape Modell {p_landscape_right_for_not_deepfake}")
+        st.text(
+            f"Anzahl richtiger identifizierter Real Bilder vom Landscape Modell {p_landscape_right_for_not_deepfake}")
         st.text(f"Anzahl richtiger identifizierter Real Bilder vom Building Modell {p_building_right_for_not_deepfake}")
         st.text(f"Anzahl richtiger identifizierter Real Bilder vom Edges Modell {p_edges_right_for_not_deepfake}")
-        st.text(f"Anzahl richtiger identifizierter Real Bilder vom frequency Modell {p_frequency_right_for_not_deepfake}")
-        st.text(f"Anzahl richtiger identifizierter Real Bilder vom grayscale Modell {p_grayscale_right_for_not_deepfake}")
+        st.text(
+            f"Anzahl richtiger identifizierter Real Bilder vom frequency Modell {p_frequency_right_for_not_deepfake}")
+        st.text(
+            f"Anzahl richtiger identifizierter Real Bilder vom grayscale Modell {p_grayscale_right_for_not_deepfake}")
     else:
         st.info("Bitte wähle ein Ensemble Modell aus der Seitenleiste")

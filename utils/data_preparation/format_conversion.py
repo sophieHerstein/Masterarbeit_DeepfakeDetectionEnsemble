@@ -1,23 +1,16 @@
 import os
+
 import cv2
 from tqdm import tqdm
 
-# -----------------------------
-# Bild speichern in Format X
-# -----------------------------
 
 def save_as_format(img, path, fmt):
-    # fmt = "png", "jpg90", "jpg60", "webp"
     if fmt == "png":
         cv2.imwrite(path + ".png", img, [cv2.IMWRITE_PNG_COMPRESSION, 3])
 
     elif fmt == "webp":
         cv2.imwrite(path + ".webp", img, [cv2.IMWRITE_WEBP_QUALITY, 90])
 
-
-# -----------------------------
-# Einen Ordner verarbeiten
-# -----------------------------
 
 def process_folder(input_folder, output_folder, fmt):
     os.makedirs(output_folder, exist_ok=True)
@@ -28,7 +21,6 @@ def process_folder(input_folder, output_folder, fmt):
         if not os.path.isfile(in_path):
             continue
 
-        # Dateiname ohne Extension
         name, _ = os.path.splitext(filename)
         out_path = os.path.join(output_folder, name)
 
@@ -39,10 +31,6 @@ def process_folder(input_folder, output_folder, fmt):
         save_as_format(img, out_path, fmt)
 
 
-# -----------------------------
-# Hauptlogik
-# -----------------------------
-
 def process_testset(base_input, base_output, fmt):
     for cls in ["0_real", "1_fake"]:
         inp = os.path.join(base_input, cls)
@@ -51,11 +39,9 @@ def process_testset(base_input, base_output, fmt):
 
 
 if __name__ == "__main__":
-    # Ursprungsordner
     known_input = "../data/test/known_test"
     unknown_input = "../data/test/unknown_test"
 
-    # Formate, die erzeugt werden sollen
     formats = ["png", "webp"]
 
     for fmt in formats:

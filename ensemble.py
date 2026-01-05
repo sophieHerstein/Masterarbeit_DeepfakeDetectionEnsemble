@@ -1,18 +1,20 @@
+import csv
 import json
+import os
+import pickle
 
+import cv2
 import numpy as np
+import pandas as pd
+import torch
 from PIL import Image, ImageFilter
 from scipy.special import expit
-import cv2
 from torchvision import transforms
-import torch
-from utils.ensemble.model_loader import get_model
+
 from classifier import MiniCNN
 from utils.config import CONFIG
-import os
-import csv
-import pickle
-import pandas as pd
+from utils.ensemble.model_loader import get_model
+
 
 class Ensemble:
 
@@ -35,16 +37,19 @@ class Ensemble:
                     self.meta_classifier = pickle.load(file)
         elif self.specialized and self.diverse:
             if self.meta and self.weighted:
-                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_diverse_with_weights.pkl")
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"],
+                                         "meta_classifier_for_ensemble_diverse_with_weights.pkl")
                 with open(ckpt_path, 'rb') as file:
                     self.meta_classifier = pickle.load(file)
             elif self.meta:
-                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_diverse_no_weights.pkl")
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"],
+                                         "meta_classifier_for_ensemble_diverse_no_weights.pkl")
                 with open(ckpt_path, 'rb') as file:
                     self.meta_classifier = pickle.load(file)
         elif not self.specialized:
             if self.meta:
-                ckpt_path = os.path.join(CONFIG["checkpoint_dir"], "meta_classifier_for_ensemble_not_specialized_no_weights.pkl")
+                ckpt_path = os.path.join(CONFIG["checkpoint_dir"],
+                                         "meta_classifier_for_ensemble_not_specialized_no_weights.pkl")
                 with open(ckpt_path, 'rb') as file:
                     self.meta_classifier = pickle.load(file)
 
@@ -104,17 +109,17 @@ class Ensemble:
             }
 
         self.transform_gray = transforms.Compose([
-                transforms.Resize(int(CONFIG["image_size"] * 1.1)),
-                transforms.CenterCrop(CONFIG["image_size"]),
-                transforms.Grayscale(num_output_channels=3),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5] * 3, [0.5] * 3)
+            transforms.Resize(int(CONFIG["image_size"] * 1.1)),
+            transforms.CenterCrop(CONFIG["image_size"]),
+            transforms.Grayscale(num_output_channels=3),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
         self.transform = transforms.Compose([
-                transforms.Resize(int(CONFIG["image_size"] * 1.1)),
-                transforms.CenterCrop(CONFIG["image_size"]),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5] * 3, [0.5] * 3)
+            transforms.Resize(int(CONFIG["image_size"] * 1.1)),
+            transforms.CenterCrop(CONFIG["image_size"]),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5] * 3, [0.5] * 3)
         ])
 
         self.log_csv_path = log_csv_path
@@ -149,7 +154,6 @@ class Ensemble:
 
         return probs[1].item()
 
-
     def _is_deepfake_edges(self, img):
 
         image = Image.open(img).convert("L").filter(ImageFilter.FIND_EDGES)
@@ -161,20 +165,16 @@ class Ensemble:
 
         return probs[1].item()
 
-
     def _is_deepfake_frequence(self, img):
         image = Image.open(img).convert("L")
 
         img_array = np.array(image)
 
-        # 2D Fourier-Transformation
         f = np.fft.fft2(img_array)
-        fshift = np.fft.fftshift(f)  # Nullfrequenzen in die Mitte
+        fshift = np.fft.fftshift(f)
 
-        # Betrag (Magnitude) und logarithmische Skalierung
         magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
 
-        # Auf [0,255] normalisieren
         magnitude_spectrum = (magnitude_spectrum / np.max(magnitude_spectrum) * 255).astype(np.uint8)
 
         img_tensor = self.transform_gray(Image.fromarray(magnitude_spectrum)).unsqueeze(0)
@@ -184,7 +184,6 @@ class Ensemble:
             probs = torch.softmax(logits, dim=1).squeeze()
 
         return probs[1].item()
-
 
     def _is_deepfake_human(self, img):
 
@@ -208,7 +207,6 @@ class Ensemble:
 
         return probs[1].item()
 
-
     def _is_deepfake_landscape(self, img):
         image = Image.open(img).convert("RGB")
         img_tensor = self.transform(image).unsqueeze(0)
@@ -218,7 +216,6 @@ class Ensemble:
             probs = torch.softmax(logits, dim=1).squeeze()
 
         return probs[1].item()
-
 
     def _is_deepfake_building(self, img):
 
@@ -231,18 +228,12 @@ class Ensemble:
 
         return probs[1].item()
 
-
     def _get_quality_weight(self, img):
         if self.quality_stats is None:
             raise RuntimeError("Quality stats not initialized. weighted=False?")
 
         gray = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-        # Beispielhafte Statistikwerte (mu, sigma, tau) – normalerweise aus Datensatz berechnet
-        # JSON mit Stats laden (muss vorher mit compute_stats.py erzeugt worden sein)
-        # Qualitätsvektor berechnen
         q = self._quality_vector(gray, self.quality_stats)
-
-        # Gewichte berechnen
         w = self._ensemble_weights(q)
         return w
 
@@ -250,8 +241,8 @@ class Ensemble:
         if self.category_model is None or self.category_transform is None:
             raise RuntimeError("Category model not initialized. weighted=False?")
 
-        image = cv2.imread(img)[:, :, ::-1]  # BGR -> RGB
-        img_tensor = self.category_transform(Image.fromarray(image)).unsqueeze(0)  # [1,3,H,W]
+        image = cv2.imread(img)[:, :, ::-1]
+        img_tensor = self.category_transform(Image.fromarray(image)).unsqueeze(0)
 
         with torch.no_grad():
             logits = self.category_model(img_tensor)
@@ -259,96 +250,50 @@ class Ensemble:
 
         classes = self.category_ckpt["classes"]
 
-        # Batch-Dimension wegnehmen
         return {cls: float(p) for cls, p in zip(classes, probs[0].tolist())}
 
-    # --------------------------------------------------------
-    # 1) QUALITÄTSMERKMALE BERECHNEN
-    # --------------------------------------------------------
-    # Jede Funktion liefert einen Rohwert auf der nativen Skala der Metrik
-    # (z. B. Laplacian-Varianz kann sehr groß sein, Dynamikumfang max. 255).
-
     def _laplacian_var(self, gray):
-        """Kantenqualität: Schärfemaß (Varianz des Laplacians)"""
         return cv2.Laplacian(gray, cv2.CV_64F).var()
 
     def _highfreq_ratio(self, gray, frac=0.25):
-        """Frequenzqualität: Anteil der Hochfrequenzen im Fourier-Spektrum"""
         g = gray.astype(np.float32) / 255.0
         F = np.fft.fftshift(np.fft.fft2(g))
         mag = np.abs(F)
         H, W = g.shape
         yy, xx = np.ogrid[-H // 2:H // 2, -W // 2:W // 2]
-        r = np.sqrt(yy ** 2 + xx ** 2) / (0.5 * min(H, W))  # Normierter Radius
+        r = np.sqrt(yy ** 2 + xx ** 2) / (0.5 * min(H, W))
         hf = mag[r >= (1 - frac)].sum()
         tot = mag.sum() + 1e-8
-        return hf / tot  # Verhältnis HF zu Gesamtenergie
+        return hf / tot
 
     def _dynamic_range(self, gray):
-        """Graustufenqualität: Dynamikumfang (95. - 5. Perzentil)"""
         p5, p95 = np.percentile(gray, [5, 95])
         return p95 - p5
 
     def _clipping_fraction(self, gray):
-        """Graustufenqualität: Anteil über- oder unterbelichteter Pixel"""
         return ((gray < 5).sum() + (gray > 250).sum()) / gray.size
 
-    # --------------------------------------------------------
-    # 2) NORMIERUNG & MAPPING
-    # --------------------------------------------------------
-    # Rohwerte sind nicht vergleichbar → deshalb Normierung (z-Score)
-    # und Mapping (Sigmoid) auf [0,1].
-    # mean/std stammen aus deinem Trainings- oder Validierungssplit.
-
     def _to_quality(self, raw_value, mu, sigma, tau=2.0):
-        """
-        Normiert einen Rohwert (z-Score) und mappt ihn per Sigmoid auf [0,1].
-        tau = Skalenparameter, steuert wie "weich" die Abbildung ist.
-        """
         z = (raw_value - mu) / (sigma + 1e-8)
         return float(expit(z / tau))
 
-    # --------------------------------------------------------
-    # 3) QUALITÄTSVEKTOR BILDEN
-    # --------------------------------------------------------
-    # Liefert (q_edge, q_freq, q_gray), alle Werte in [0,1].
-
     def _quality_vector(self, gray, stats):
-        """
-        stats = Dictionary mit (mu, sigma, tau) pro Qualitätsmerkmal,
-                berechnet aus deinem Datensatz.
-        """
-        # Kanten (Schärfe)
         edge_raw = self._laplacian_var(gray)
         q_edge = self._to_quality(edge_raw, *stats['edge'])
 
-        # Frequenz (HF-Anteil)
         freq_raw = self._highfreq_ratio(gray)
         q_freq = self._to_quality(freq_raw, *stats['freq'])
 
-        # Graustufen (Dynamikumfang - Clipping)
         gray_raw = self._dynamic_range(gray) * (1 - self._clipping_fraction(gray))
         q_gray = self._to_quality(gray_raw, *stats['gray'])
 
         return np.array([q_edge, q_freq, q_gray])
 
-    # --------------------------------------------------------
-    # 4) GEWICHTSFORMEL
-    # --------------------------------------------------------
-    # Macht aus den [0,1]-Qualitätswerten gültige Modellgewichte,
-    # die zusammen 1 ergeben und die Modelle gemäß Qualität betonen.
-
     def _ensemble_weights(self, q, eps=0.02, alpha=2.0):
-        """
-        q = Qualitätsvektor (zwischen 0 und 1)
-        eps = kleiner Offset, damit kein Modell komplett 0 wird
-        alpha = Exponent, steuert die "Schärfe" der Gewichtung
-        """
         w = (q + eps) ** alpha
-        return w / w.sum()  # Normierung: Summe = 1
+        return w / w.sum()
 
     def predict(self, img, label=None, verbose: bool = True, log: bool = True):
-        # Einzelwahrscheinlichkeiten
         if self.specialized:
             probs = {
                 "human": self._is_deepfake_human(img),
@@ -371,7 +316,7 @@ class Ensemble:
 
         prob_cols = ["p_human", "p_landscape", "p_building", "p_edges", "p_frequency", "p_grayscale"]
 
-        weights = {k: None for k in probs.keys()}  # default None
+        weights = {k: None for k in probs.keys()}
         if self.weighted:
             category_weights = self._get_category_weights(img)
             quality_weights = self._get_quality_weight(img)
@@ -451,12 +396,9 @@ class Ensemble:
                                                      probs["human"] + probs["landscape"] + probs["building"]
                                              ) / 3.0
 
-
-
         if self.meta:
             final_prob = pred[0][1]
         else:
-            # Finale Wahrscheinlichkeit & Entscheidung
             final_prob = (deepfake_prob_based_on_category + deepfake_prob_based_on_quality) / 2
 
         prediction = int(final_prob > 0.5)
@@ -465,7 +407,6 @@ class Ensemble:
             mode = "weighted" if self.weighted else "unweighted"
             print(f"Prediction for {img} ({mode}): {final_prob:.3f}")
 
-        # ins CSV loggen
         if log and self.log_csv_path is not None:
             with open(self.log_csv_path, "a", newline="") as f:
                 writer = csv.writer(f)
@@ -483,4 +424,3 @@ class Ensemble:
                 ])
 
         return prediction, final_prob
-

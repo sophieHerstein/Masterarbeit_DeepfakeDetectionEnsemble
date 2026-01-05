@@ -4,30 +4,24 @@ import shutil
 
 RNG = random.Random(42)
 
+
 def copy_random_images(src_folder, dst_folder, n, name_prefix="image"):
-    # Alle Dateien im Quellordner auflisten
     files = [f for f in os.listdir(src_folder) if os.path.isfile(os.path.join(src_folder, f))]
 
-    # Nur Bilddateien (optional: nach Endung filtern)
     image_files = [f for f in files if f.lower().endswith((".png", ".jpg", ".jpeg"))]
 
     if n > len(image_files):
         raise ValueError(f"Es gibt nur {len(image_files)} Bilder im Ordner, aber {n} wurden angefordert.")
 
-    # Zufällige Auswahl treffen
     selected_files = RNG.sample(image_files, n)
 
-    # Zielordner erstellen, falls er nicht existiert
     os.makedirs(dst_folder, exist_ok=True)
 
-    # Kopieren mit neuem Namen
     for idx, filename in enumerate(selected_files, start=1):
         src_path = os.path.join(src_folder, filename)
 
-        # Dateiendung behalten
         ext = os.path.splitext(filename)[1]
 
-        # Neuen Namen zusammensetzen
         new_name = f"{name_prefix}_{idx}{ext}"
 
         dst_path = os.path.join(dst_folder, new_name)

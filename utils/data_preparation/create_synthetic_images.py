@@ -4,18 +4,13 @@ import random
 import re
 import sys
 
-from dotenv import load_dotenv
-from huggingface_hub import login, hf_hub_download, list_repo_files
 import torch
-
+from config import PROMPTS, CONFIG, CATEGORIES, SYNTHETIC_VARIANTEN_BEKANNT, SYNTHETIC_VARIANTEN_UNBEKANNT
 from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image, \
     DPMSolverMultistepScheduler
+from dotenv import load_dotenv
+from huggingface_hub import login, hf_hub_download, list_repo_files
 
-from config import PROMPTS, CONFIG, CATEGORIES, SYNTHETIC_VARIANTEN_BEKANNT, SYNTHETIC_VARIANTEN_UNBEKANNT
-
-# ------------------------------------------------------------------------------
-# Pfade & Umgebungsvariablen
-# ------------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv()
@@ -23,23 +18,19 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 RNG = random.Random(42)
 
-# ------------------------------------------------------------------------------
-# Globals (Pipelines werden einmalig geladen und wiederverwendet)
-# ------------------------------------------------------------------------------
 _HF_CACHE = {}
 
-# Einheitliche Inferenzparameter
 STEPS = 40
 GUIDANCE_SCALE = 4.5
-# ------------------------------------------------------------------------------
-# Utilities
-# ------------------------------------------------------------------------------
+
+
 def _slugify(text):
     text = re.sub(r"\s+", "-", text.strip())
     text = re.sub(r"[^A-Za-z0-9\-._]", "", text)
     return text[:60] if len(text) > 60 else text
 
-def get_image_output(image_category, model, image_prompt, seed, unknown = False):
+
+def get_image_output(image_category, model, image_prompt, seed, unknown=False):
     p = _slugify(image_prompt)
     name = f"{image_category}_synthetic_{model}_{p}_{seed}.jpg"
     image_out = os.path.join(
@@ -65,15 +56,14 @@ def write_csv_row(image_category, image_prompt, model, image_path, seed):
             writer.writerow(["Kategorie", "Prompt", "Modell", "Path", "Seed"])
         writer.writerow([image_category, image_prompt, model, image_path, seed])
 
+
 def make_generator():
     seed = RNG.randint(1, 1000000000)
     g = torch.Generator(device="cuda")
     g.manual_seed(seed)
     return g, seed
 
-# ------------------------------------------------------------------------------
-# Generatoren
-# ------------------------------------------------------------------------------
+
 def generate_image_with_stable_diffusion_15():
     print("Generating synthetic images with Stable Diffusion 1.5")
     model_id = "sd-legacy/stable-diffusion-v1-5"
@@ -182,9 +172,6 @@ def generate_image_with_dreamshaper():
     torch.cuda.empty_cache()
 
 
-# ------------------------------------------------------------------------------
-# High-level Wrapper
-# ------------------------------------------------------------------------------
 def create_images():
     generate_image_with_stable_diffusion_15()
     generate_image_with_dreamlike_photoreal_20()
@@ -195,9 +182,6 @@ def create_images_unbekannt():
     generate_image_with_dreamshaper()
 
 
-# ------------------------------------------------------------------------------
-# Main
-# ------------------------------------------------------------------------------
 if __name__ == "__main__":
     print("Starting ....")
 
@@ -206,9 +190,7 @@ if __name__ == "__main__":
 
     login(token=HF_TOKEN, add_to_git_credential=True)
 
-
     create_images()
     create_images_unbekannt()
 
     print("DONE")
-

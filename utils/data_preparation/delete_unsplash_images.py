@@ -1,15 +1,9 @@
-import os
 import json
+import os
 
-# -------------------------------------------------------
-# Pfade anpassen
-# -------------------------------------------------------
 IMAGE_DIR = "../data_raw/lhq"
 JSON_FILE = "../data_raw/metadata.json"
 
-# -------------------------------------------------------
-# JSON laden
-# -------------------------------------------------------
 with open(JSON_FILE, "r", encoding="utf-8") as f:
     data = json.load(f)
 

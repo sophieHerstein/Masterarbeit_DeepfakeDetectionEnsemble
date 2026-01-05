@@ -1,10 +1,7 @@
-# Array mit Kategorien
 CATEGORIES = ["human", "building", "landscape"]
 
-#Methoden für das Vorverarbeiten der Bilder
 PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
 
-# Anzahl der Varianten je Prompt
 SYNTHETIC_VARIANTEN_BEKANNT = 14
 SYNTHETIC_VARIANTEN_UNBEKANNT = 6
 
@@ -12,14 +9,13 @@ MANIPULATED_VARIANTEN_BEKANNT = 14
 MANIPULATED_VARIANTEN_UNBEKANNT = 6
 MANIPULATED_HUMAN_VARIANTEN_BEKANNT = 7
 
-# CNN Modelle
 BASE_MODELS = [
     "xception71",
-	"mobilenetv2_100",
+    "mobilenetv2_100",
     "tf_efficientnet_b3",
-	"densenet121",
-	"resnet50d",
-	"convnext_small"
+    "densenet121",
+    "resnet50d",
+    "convnext_small"
 ]
 
 ENSEMBLE_VARIANTEN = [
@@ -40,7 +36,6 @@ ALL_MODELS = [
     *ENSEMBLE_VARIANTEN
 ]
 
-# Trainingsvarianten
 TRAININGS_VARIANTEN = [
     *CATEGORIES,
     *PREPROCESS_METHODS,
@@ -68,7 +63,6 @@ TEST_VARIANTEN = [
     "unknown_test_histogram"
 ]
 
-# enthält Pfade und andere Parameter usw.
 CONFIG = {
     "synthetic_images_log_path": "logs/image_synthesis/image_synthesis_log.csv",
     "manipulated_images_log_path": "logs/image_manipulation/image_manipulation_log.csv",
@@ -94,8 +88,8 @@ CONFIG = {
 
     "splited_images_path": "splited_images",
 
-    "train_dir":"data/train",
-    "val_dir":"data/val",
+    "train_dir": "data/train",
+    "val_dir": "data/val",
 
     "building_train_dir": "data/train/building",
     "building_val_dir": "data/val/building",
@@ -138,14 +132,14 @@ CONFIG = {
     "image_size": 224,
     "epochs": 30,
     "early_stopping_patience": 4,
-    "batch_size":"",
-    "learning_rate":""
+    "batch_size": "",
+    "learning_rate": ""
 
 }
 
 # Prompts für synthetische Bilder
 PROMPTS = {
-    "human": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
+    "human": [  # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "photo of a young boy with curly hair, smiling outdoors in the park",
         "photo of a young woman with dyed blue hair, street style fashion",
         "portrait photo of a young Asian woman with long black hair, natural daylight, 50mm lens",
@@ -172,7 +166,7 @@ PROMPTS = {
         "portrait of a middle-aged woman with short hair, workplace setting",
         "photo of a diverse group of five people posing outdoors, wide shot"
     ],
-    "building": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
+    "building": [  # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "modern glass skyscraper in city center, photographed at dusk",
         "old European cathedral with gothic details, daylight",
         "traditional Japanese wooden house, garden with lanterns",
@@ -199,7 +193,7 @@ PROMPTS = {
         "ancient Roman amphitheater ruins",
         "small countryside church with stone walls"
     ],
-    "landscape": [ # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
+    "landscape": [  # → 25 Prompts á 14 Varianten bzw. á 6 Varianten für unbekannten Datensatz
         "alpine mountain landscape at sunrise, snow peaks glowing",
         "dense rainforest with mist, sunlight filtering through trees",
         "desert dunes under clear blue sky, detailed sand textures",
@@ -230,7 +224,7 @@ PROMPTS = {
 
 EDIT_LIBRARY = {
     "landscape": {
-        "img2img": [ # 25 Prompts
+        "img2img": [  # 25 Prompts
             "sunny summer field",
             "cloudy mountain view",
             "foggy forest",
@@ -257,7 +251,7 @@ EDIT_LIBRARY = {
             "rainy forest path",
             "sunny forest path"
         ],
-        "inpaint": [ # 25 Prompts
+        "inpaint": [  # 25 Prompts
             "add small wooden cabin",
             "add tent in field",
             "add red car on dirt path",
@@ -284,7 +278,7 @@ EDIT_LIBRARY = {
             "add fox in forest",
             "add tree stump"
         ],
-        "instruction": [ # 25 Prompts
+        "instruction": [  # 25 Prompts
             "make it snowy winter scene",
             "make it autumn with colorful leaves",
             "make it spring with blossoms",
@@ -313,7 +307,7 @@ EDIT_LIBRARY = {
         ],
     },
     "building": {
-        "img2img": [ # 25 Prompts
+        "img2img": [  # 25 Prompts
             "modern glass facade, daylight",
             "building under cloudy sky",
             "building at night with lit windows",
@@ -340,7 +334,7 @@ EDIT_LIBRARY = {
             "building in winter daylight",
             "industrial building, daytime"
         ],
-        "inpaint": [ # 25 Prompts
+        "inpaint": [  # 25 Prompts
             "add ivy on facade",
             "add graffiti on wall",
             "add small balcony",
@@ -367,7 +361,7 @@ EDIT_LIBRARY = {
             "add railing on stairs",
             "add security camera"
         ],
-        "instruction": [ # 25 Prompts
+        "instruction": [  # 25 Prompts
             "make it nighttime with lit windows",
             "make it sunset atmosphere",
             "make it early morning light",
@@ -396,7 +390,7 @@ EDIT_LIBRARY = {
         ],
     },
     "human": {
-        "img2img": [ # 25 Prompts
+        "img2img": [  # 25 Prompts
             "neutral portrait under soft daylight",
             "portrait with strong contrast lighting",
             "indoor portrait with warm artificial light",
@@ -423,7 +417,7 @@ EDIT_LIBRARY = {
             "portrait under cloudy daylight",
             "portrait illuminated by laptop screen"
         ],
-        "inpaint": [ # 25 Prompts
+        "inpaint": [  # 25 Prompts
             "add sunglasses",
             "add eyeglasses",
             "add baseball cap",
@@ -450,7 +444,7 @@ EDIT_LIBRARY = {
             "add wireless headphones",
             "add headscarf"
         ],
-        "instruction": [ # 25 Prompts
+        "instruction": [  # 25 Prompts
             "change hair color to blonde",
             "change hair color to brown",
             "change hair color to black",

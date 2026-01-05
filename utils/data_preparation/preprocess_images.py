@@ -1,19 +1,23 @@
 import os
+
+import numpy as np
 from PIL import Image, ImageFilter
 from tqdm import tqdm
-import numpy as np
 
-from utils.config import CONFIG, CATEGORIES  # falls genutzt
+from utils.config import CONFIG
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def _open_gray(image_or_path):
     with Image.open(image_or_path) as img:
         return img.convert("L")
 
+
 def get_grayscale(image_path):
     print("[INFO] Getting grayscale image...")
     return _open_gray(image_path)
+
 
 def get_frequency_spectrum(image_path):
     print("[INFO] Getting frequency spectrum...")
@@ -21,23 +25,22 @@ def get_frequency_spectrum(image_path):
         img = img.convert("L")
         img_array = np.array(img)
 
-    # 2D Fourier-Transformation
     f = np.fft.fft2(img_array)
-    fshift = np.fft.fftshift(f)  # Nullfrequenzen in die Mitte
+    fshift = np.fft.fftshift(f)
 
-    # Betrag (Magnitude) und logarithmische Skalierung
     magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
 
-    # Auf [0,255] normalisieren
     magnitude_spectrum = (magnitude_spectrum / np.max(magnitude_spectrum) * 255).astype(np.uint8)
 
     return Image.fromarray(magnitude_spectrum)
+
 
 def get_edges(image_path):
     print("[INFO] Getting edges...")
     with Image.open(image_path) as img:
         img = img.convert("L")
         return img.filter(ImageFilter.FIND_EDGES)
+
 
 def process_images(input_root, output_root_grayscale, output_root_edges, output_root_frequency):
     for root, _, files in os.walk(input_root):
@@ -67,6 +70,7 @@ def process_images(input_root, output_root_grayscale, output_root_edges, output_
 
             except Exception as e:
                 print(f"Fehler bei Datei {in_path}: {e}")
+
 
 if __name__ == "__main__":
     for p in ["building_train_dir", "landscape_train_dir", "human_train_dir"]:

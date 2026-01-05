@@ -1,6 +1,7 @@
 import os
 import shutil
 
+
 def cleanup_imagenet(root_dir, keep_ids):
     if not os.path.isdir(root_dir):
         raise ValueError(f"{root_dir} ist kein gültiger Ordner")

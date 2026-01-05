@@ -6,6 +6,7 @@ import pandas as pd
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 path = f"../logs/test/ensemble"
 
+
 def classify_image(title: str):
     title = title.lower()
 
@@ -31,9 +32,11 @@ def classify_image(title: str):
     else:
         return "UNKNOWN"
 
+
 def add_column(df: pd.DataFrame):
     df["category"] = df["img"].apply(classify_image)
     return df
+
 
 def add_column_for_all_csvs():
     folder = Path(os.path.join(PROJECT_ROOT, path))

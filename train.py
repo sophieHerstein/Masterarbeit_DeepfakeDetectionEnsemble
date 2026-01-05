@@ -1,18 +1,20 @@
-import torch
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-from torch import nn, optim
-from utils.ensemble.model_loader import get_model
-from utils.config import CONFIG, TRAININGS_VARIANTEN, BASE_MODELS, PREPROCESS_METHODS
-import os
-import time
 import csv
 import itertools
+import os
+import time
+
+import torch
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+from utils.config import CONFIG, TRAININGS_VARIANTEN, BASE_MODELS, PREPROCESS_METHODS
+from utils.ensemble.model_loader import get_model
+
 
 def train_model(config, model_name, variante, grid_search=False):
     device = torch.device("cuda")
     print(f"Starte Training auf Gerät: {device}")
-
 
     if variante in PREPROCESS_METHODS:
         transform = transforms.Compose([
@@ -90,10 +92,12 @@ def train_model(config, model_name, variante, grid_search=False):
         if not grid_search:
             with open(epoch_log_path, "a", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([epoch + 1, f"{train_acc:.2f}", f"{val_acc:.2f}", f"{running_loss:.4f}", f"{epoch_time:.2f}"])
+                writer.writerow(
+                    [epoch + 1, f"{train_acc:.2f}", f"{val_acc:.2f}", f"{running_loss:.4f}", f"{epoch_time:.2f}"])
 
         eta = (time.time() - start_time) / (epoch + 1) * (config["epochs"] - epoch - 1)
-        print(f"Epoche {epoch + 1}/{config['epochs']} - Loss: {running_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%, ETA: {eta:.0f}s")
+        print(
+            f"Epoche {epoch + 1}/{config['epochs']} - Loss: {running_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%, ETA: {eta:.0f}s")
 
         if not grid_search:
             if val_acc > best_val_acc:
@@ -124,10 +128,11 @@ def train_model(config, model_name, variante, grid_search=False):
                 f"{val_acc:.2f}",
                 f"{running_loss:.4f}",
                 f"{int(time.time() - start_time)}",
-                epoch+1
+                epoch + 1
             ])
 
     return val_acc
+
 
 def parameter_grid_search(config, grid, variante, test_model):
     print("Starte Parameter-Test mit Grid Search")
@@ -146,7 +151,8 @@ def parameter_grid_search(config, grid, variante, test_model):
             best_acc = acc
             best_config = {"learning_rate": lr, "batch_size": bs}
 
-    print(f"Beste Parameterkombination: LR={best_config['learning_rate']} | Batch={best_config['batch_size']} | Acc={best_acc:.2f}%")
+    print(
+        f"Beste Parameterkombination: LR={best_config['learning_rate']} | Batch={best_config['batch_size']} | Acc={best_acc:.2f}%")
     return best_config
 
 

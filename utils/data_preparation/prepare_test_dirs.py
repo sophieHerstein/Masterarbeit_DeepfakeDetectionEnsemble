@@ -1,11 +1,13 @@
 import os
 import shutil
+
 from config import CONFIG, CATEGORIES
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 unknown_test_base_path = os.path.join(PROJECT_ROOT, "images", "unknown")
 known_test_base_path = os.path.join(PROJECT_ROOT, CONFIG["splited_images_path"], "test")
+
 
 def prepare_unknown_test_dirs():
     os.makedirs(os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'], "0_real"), exist_ok=True)
@@ -17,10 +19,12 @@ def prepare_unknown_test_dirs():
             for d2 in os.listdir(os.path.join(path, d)):
                 if d == "realistic":
                     for f in os.listdir(os.path.join(path, d, d2)):
-                        shutil.copy2(os.path.join(path, d, d2, f), os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'], "0_real"))
+                        shutil.copy2(os.path.join(path, d, d2, f),
+                                     os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'], "0_real"))
                 else:
                     for f in os.listdir(os.path.join(path, d, d2)):
-                        shutil.copy2(os.path.join(path, d, d2, f), os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'], "1_fake"))
+                        shutil.copy2(os.path.join(path, d, d2, f),
+                                     os.path.join(PROJECT_ROOT, CONFIG['unknown_test_dir'], "1_fake"))
 
 
 def prepare_known_test_dirs():
@@ -32,10 +36,12 @@ def prepare_known_test_dirs():
             print(f"[INFO] -KNOWN- Copying {d} images for {cat}")
             if d == "0_real":
                 for f in os.listdir(os.path.join(path, d)):
-                    shutil.copy2(os.path.join(path, d, f), os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'], "0_real"))
+                    shutil.copy2(os.path.join(path, d, f),
+                                 os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'], "0_real"))
             else:
                 for f in os.listdir(os.path.join(path, d)):
-                    shutil.copy2(os.path.join(path, d, f), os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'], "1_fake"))
+                    shutil.copy2(os.path.join(path, d, f),
+                                 os.path.join(PROJECT_ROOT, CONFIG['known_test_dir'], "1_fake"))
 
 
 if __name__ == '__main__':

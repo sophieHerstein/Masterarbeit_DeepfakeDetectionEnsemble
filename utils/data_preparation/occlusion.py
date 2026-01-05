@@ -1,31 +1,27 @@
 import os
+import random
+
 import cv2
 import numpy as np
 from tqdm import tqdm
-import random
 
 
 def random_occlusion(img):
     h, w, _ = img.shape
-    # Rechteck zwischen 10% und 25% der Bildfläche
-    occ_w = np.random.randint(int(w*0.10), int(w*0.3))
-    occ_h = np.random.randint(int(h*0.10), int(h*0.3))
+
+    occ_w = np.random.randint(int(w * 0.10), int(w * 0.3))
+    occ_h = np.random.randint(int(h * 0.10), int(h * 0.3))
 
     x = np.random.randint(0, w - occ_w)
     y = np.random.randint(0, h - occ_h)
 
     result = img.copy()
 
-    # Farbe: schwarz, dunkelgrau oder hellgrau
-    color = random.choice([(0,0,0), (50,50,50), (120,120,120)])
+    color = random.choice([(0, 0, 0), (50, 50, 50), (120, 120, 120)])
 
-    cv2.rectangle(result, (x, y), (x+occ_w, y+occ_h), color, -1)
+    cv2.rectangle(result, (x, y), (x + occ_w, y + occ_h), color, -1)
     return result
 
-
-# -----------------------------
-# Einen Ordner verarbeiten
-# -----------------------------
 
 def process_folder(input_folder, output_folder):
     os.makedirs(output_folder, exist_ok=True)
@@ -41,15 +37,10 @@ def process_folder(input_folder, output_folder):
         if img is None:
             continue
 
-
         img = random_occlusion(img)
 
         cv2.imwrite(out_path, img)
 
-
-# -----------------------------
-# Hauptfunktion
-# -----------------------------
 
 def process_testset(base_input, base_output):
     for cls in ["0_real", "1_fake"]:

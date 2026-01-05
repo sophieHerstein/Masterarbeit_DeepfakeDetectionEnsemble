@@ -1,67 +1,46 @@
-import cv2
 import os
 import random
-import numpy as np
 
-# ---------------------------------------------------------
-# KONFIGURATION – HIER EINMAL ANPASSEN
-# ---------------------------------------------------------
+import cv2
 
-# Ordner für die Eingabe-Fake-Bilder
 INPUT_FAKE_DIR_KNOWN = "../data/test/known_test/1_fake"
 INPUT_FAKE_DIR_UNKNOWN = "../data/test/unknown_test/1_fake"
 
-# Hintergrundbilder
 BACKGROUND_DIR_KNOWN = "../data/backgrounds/known"
 BACKGROUND_DIR_UNKNOWN = "../data/backgrounds/unknown"
 
-# Ausgabeordner
 OUTPUT_KNOWN = "../data/test/known_test_insertion/1_fake"
 OUTPUT_UNKNOWN = "../data/test/unknown_test_insertion/1_fake"
 
-
-# ---------------------------------------------------------
-# HILFSFUNKTIONEN
-# ---------------------------------------------------------
 
 def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
 
 def get_face_bbox(image, face_detector):
-    """Findet das größte erkannte Gesicht im Bild."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_detector.detectMultiScale(gray, 1.3, 5)
 
     if len(faces) == 0:
         return None
 
-    # Größtes Gesicht zurückgeben
     x, y, w, h = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[0]
     return (x, y, w, h)
 
 
 def insert_face_into_background(fake_face, background):
-    """
-    Fügt das extrahierte Fake-Gesicht in ein Hintergrundbild ein.
-    Das Gesicht wird skaliert und an zufälliger Position platziert.
-    """
-
     h_bg, w_bg = background.shape[:2]
     h_f, w_f = fake_face.shape[:2]
 
-    # Gesicht soll etwa 15–30% der Bildbreite haben
     target_width = random.randint(int(w_bg * 0.15), int(w_bg * 0.30))
     scale = target_width / w_f
 
     fake_face_resized = cv2.resize(fake_face, None, fx=scale, fy=scale)
     h_f, w_f = fake_face_resized.shape[:2]
 
-    # Prüfen, ob Hintergrund groß genug ist
     if w_f >= w_bg or h_f >= h_bg:
         return None
 
-    # Zufällige Position
     max_x = w_bg - w_f - 1
     max_y = h_bg - h_f - 1
 
@@ -73,7 +52,6 @@ def insert_face_into_background(fake_face, background):
 
     roi = background[y:y + h_f, x:x + w_f]
 
-    # Kanten leicht weichzeichnen
     blended = cv2.addWeighted(roi, 0.5, fake_face_resized, 0.5, 0)
 
     background[y:y + h_f, x:x + w_f] = blended
@@ -82,7 +60,6 @@ def insert_face_into_background(fake_face, background):
 
 
 def contains_face(image, detector):
-    """Prüft, ob ein Gesicht im Bild erkannt wird."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = detector.detectMultiScale(gray, 1.3, 5)
 
@@ -143,10 +120,6 @@ def run_insertion(input_dir, bg_dir, output_dir):
 
     print(f" Fertig! Ergebnisse gespeichert in: {output_dir}\n")
 
-
-# ---------------------------------------------------------
-# MAIN – wird direkt ausgeführt
-# ---------------------------------------------------------
 
 def main():
     print("=== Fake Insertion Test läuft ===\n")
