@@ -213,14 +213,14 @@ def get_plots_for_weights(test_dir):
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
-    #                                "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
-    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
-    #                                "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
-    # get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
-    # get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+                                   "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
+    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+                                   "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
+    get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
     get_plots_for_weights("unknown_test_noisy_dir")
     get_plots_for_weights("unknown_test_jpeg_dir")

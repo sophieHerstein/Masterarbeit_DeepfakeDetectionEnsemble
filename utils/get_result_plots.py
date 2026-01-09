@@ -619,9 +619,9 @@ def get_zusammenfassungs_plot():
 
 
 if __name__ == "__main__":
-    # get_train_plots()
-    # get_confusion_matrices()
+    get_train_plots()
+    get_confusion_matrices()
     get_test_plots()
-    # get_plot_for_poster()
+    get_plot_for_poster()
     get_robustness_plot()
     get_zusammenfassungs_plot()
