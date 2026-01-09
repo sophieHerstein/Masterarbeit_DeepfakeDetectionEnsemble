@@ -241,9 +241,9 @@ def get_model_name(model):
     if model == "unweighted_meta_classifier_ensemble_diverse":
         return "ungewichtetes Ensemble \nmit diversen Detektoren \nund Meta Classifier"
     if model == "not_specialized_ensemble":
-        return "nicht spezialisiertes Ensemble"
+        return "nicht-spezialisiertes Ensemble"
     if model == "not_specialized_meta_classifier_ensemble":
-        return "nicht spezialisiertes Ensemble \nmit Meta Classifier"
+        return "nicht-spezialisiertes Ensemble \nmit Meta Classifier"
     return "NOT FOUND"
 
 
@@ -267,41 +267,41 @@ def get_category(category):
 
 def get_variante(variante):
     if variante == "known_test_dir":
-        return "bekannte Testdaten"
+        return "In-Dataset-Tests"
     elif variante == "unknown_test_dir":
-        return "unbekannte Testdaten"
+        return "Cross-Dataset-Tests"
     elif variante == "known_test_jpeg_dir":
-        return "komprimierte bekannte Testdaten"
+        return "In-Dataset-Tests mit komprimierten Bildern"
     elif variante == "unknown_test_jpeg_dir":
-        return "komprimierte unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit komprimierten Bildern"
     elif variante == "known_test_noisy_dir":
-        return "verrauschte bekannte Testdaten"
+        return "In-Dataset-Tests mit verrauschten Bildern"
     elif variante == "unknown_test_noisy_dir":
-        return "verrauschte unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit verrauschten Bildern"
     elif variante == "known_test_scaled_dir":
-        return "skalierte bekannte Testdaten"
+        return "In-Dataset-Tests mit skalierten Bildern"
     elif variante == "unknown_test_scaled_dir":
-        return "skalierte unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit skalierten Bildern"
     elif variante == "known_test_occlusion":
-        return "verdeckte Bildbereiche bekannter Testdaten"
+        return "In-Dataset-Tests mit Okklusion"
     elif variante == "unknown_test_occlusion":
-        return "verdeckte Bildbereiche unbekannter Testdaten"
+        return "Cross-Dataset-Tests mit Okklusion"
     elif variante == "known_test_insertion":
-        return "Fake in Real Bild eingesetzt bekannte Testdaten"
+        return "In-Dataset-Tests mit Fake Insertion"
     elif variante == "unknown_test_insertion":
-        return "Fake in Real Bild eingesetzt unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit Fake Insertion"
     elif variante == "known_test_format_png":
-        return "PNG-Dateien bekannte Testdaten"
+        return "In-Dataset-Tests mit Bildern im png-Format"
     elif variante == "unknown_test_format_png":
-        return "PNG-Dateien unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit Bildern im png-Format"
     elif variante == "known_test_format_webp":
-        return "WEBP-Dateien bekannte Testdaten"
+        return "In-Dataset-Tests mit Bildern im webp-Format"
     elif variante == "unknown_test_format_webp":
-        return "WEBP-Dateien unbekannte Testdaten"
+        return "Cross-Dataset-Tests mit Bildern im webp-Format"
     elif variante == "known_test_histogram":
-        return "Histogrammveränderungen bekannter Testdaten"
+        return "In-Dataset-Tests mit Histogrammänderungen"
     elif variante == "unknown_test_histogram":
-        return "Histogrammveränderungen unbekannter Testdaten"
+        return "Cross-Dataset-Tests mit Histogrammänderungen"
     return "UNKNOWN"
 
 
@@ -524,7 +524,7 @@ def get_robustness_plot():
 
         ax.axhline(0, color='black', linestyle='--', linewidth=1)
 
-        ax.set_title(f"Robustheitsvergleich (Delta zum Standard) – {get_variante(variante)}")
+        ax.set_title(f"Robustheitsvergleich ({get_variante(variante)})")
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=90)
         ax.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
@@ -619,9 +619,9 @@ def get_zusammenfassungs_plot():
 
 
 if __name__ == "__main__":
-    get_train_plots()
-    get_confusion_matrices()
+    # get_train_plots()
+    # get_confusion_matrices()
     get_test_plots()
-    get_plot_for_poster()
+    # get_plot_for_poster()
     get_robustness_plot()
     get_zusammenfassungs_plot()

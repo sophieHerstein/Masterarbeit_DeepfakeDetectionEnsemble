@@ -33,9 +33,9 @@ def get_plots_for_klassentrennung(ensembles, test_dir):
         plt.hist(real, bins=30, alpha=0.6, label="Real")
         plt.hist(fake, bins=30, alpha=0.6, label="Fake")
         plt.axvline(0.5, linestyle="--")
-        plt.xlabel("final_prob")
+        plt.xlabel("finale Vorhersage")
         plt.ylabel("Anzahl")
-        plt.title(f"{ensemble_name} – Trennung der Klassen")
+        plt.title(f"Klassentrennung ({ensemble_name})")
         plt.legend()
         output_path = os.path.join(OUTPUT_DIR, f"{ensemble}_{test_dir}_klassentrennung.svg")
         plt.savefig(output_path)
@@ -82,7 +82,7 @@ def get_plots_for_native_model_errors_categories(test_dir):
 
     plt.xticks(x, ["Mensch", "Gebäude", "Landschaft"])
     plt.ylabel("Anzahl Fehlklassifikationen")
-    plt.title("FP/FN der Kategorie-Classifier auf ihrer Kategorie")
+    plt.title("Fehlklassifikation der Detektoren nach Kategorie")
     plt.legend()
 
     output_path = os.path.join(
@@ -129,7 +129,7 @@ def get_plots_for_native_model_errors_bildinhalt(test_dir):
 
     plt.xticks(x, ["Kanten", "Frequenz", "Graustufen"])
     plt.ylabel("Anzahl Fehlklassifikationen")
-    plt.title("FP/FN der Bildinhalt-Classifier")
+    plt.title("Fehlklassifikationen der Detektoren nach Bildinhalt")
     plt.legend()
 
     output_path = os.path.join(
@@ -150,63 +150,77 @@ def get_plots_for_weights(test_dir):
         "landscape": "w_landscape",
     }
 
+    # Englisch -> Deutsch (anpassen, falls deine CSV andere Keys nutzt)
+    CATEGORY_DE = {
+        "human": "Gesichter",
+        "building": "Gebäude",
+        "landscape": "Landschaften",
+    }
+
     df = load_ensemble_results("weighted_ensemble", test_dir)
     if df is None:
         print(f"❌ Plot nicht möglich für weighted_ensemble")
+        return
 
     weight_cols = list(CATEGORY_TO_MODEL.values())
-    label_map = {v: k for k, v in CATEGORY_TO_MODEL.items()}
+    label_map = {v: k for k, v in CATEGORY_TO_MODEL.items()}  # w_human -> human
 
+    # Vorhergesagte Kategorie (englisch)
     df["predicted_category"] = (
         df[weight_cols]
         .astype(float)
         .idxmax(axis=1)
-        .map(label_map)
+        .map(label_map)            # -> "human"/"building"/"landscape"
     )
 
+    # Beide Achsen auf Deutsch umstellen
+    df["category_de"] = df["category"].map(CATEGORY_DE).fillna(df["category"])
+    df["predicted_category_de"] = df["predicted_category"].map(CATEGORY_DE).fillna(df["predicted_category"])
+
+    # Feste Reihenfolge (optional aber empfohlen)
+    order = ["Gesichter", "Gebäude", "Landschaften"]
+
     conf_matrix = pd.crosstab(
-        df["category"],
-        df["predicted_category"],
-        rownames=["Kategorie"],
-        colnames=["vorhergesagte Kategorie"]
-    )
+        df["category_de"],
+        df["predicted_category_de"],
+        rownames=["Tatsächliche Kategorie"],
+        colnames=["Vorhergesagte Kategorie"],
+        dropna=False
+    ).reindex(index=order, columns=order, fill_value=0)
 
     plt.figure(figsize=(6, 5))
     plt.imshow(conf_matrix, cmap="Blues")
 
-    plt.xticks(range(len(conf_matrix.columns)), conf_matrix.columns)
+    plt.xticks(range(len(conf_matrix.columns)), conf_matrix.columns, rotation=0)
     plt.yticks(range(len(conf_matrix.index)), conf_matrix.index)
     plt.xlabel(conf_matrix.columns.name)
     plt.ylabel(conf_matrix.index.name)
+
     for i in range(len(conf_matrix.index)):
         for j in range(len(conf_matrix.columns)):
             plt.text(j, i, conf_matrix.iloc[i, j],
                      ha="center", va="center", color="black")
 
     plt.colorbar(label="Anzahl Bilder")
-    plt.title("Inhaltsklassifikation – Kategorienverwechslungen")
+    plt.title("Inhalts-Klassifikation des Inhalts-Klassifizierers")
 
-    output_path = os.path.join(
-        OUTPUT_DIR,
-        f"{test_dir}_wrong_weights.svg"
-    )
+    output_path = os.path.join(OUTPUT_DIR, f"{test_dir}_wrong_weights.svg")
     plt.tight_layout()
     plt.savefig(output_path)
     plt.show()
 
-    print(f"✅ Plot Falschklassifikationen des Inhalts Classifie gespeichert unter: {output_path}")
-
+    print(f"✅ Plot Falschklassifikationen des Inhaltsclassifiers gespeichert unter: {output_path}")
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
-    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
-                                   "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
-    get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
-                                   "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
-    get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
-    get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
-    get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
-    get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
+    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble"], "known_test_dir")
+    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+    #                                "unweighted_meta_classifier_ensemble"], "unknown_test_jpeg_dir")
+    # get_plots_for_klassentrennung(["weighted_ensemble", "unweighted_ensemble", "weighted_meta_classifier_ensemble",
+    #                                "unweighted_meta_classifier_ensemble"], "unknown_test_noisy_dir")
+    # get_plots_for_native_model_errors_categories("unknown_test_noisy_dir")
+    # get_plots_for_native_model_errors_categories("unknown_test_jpeg_dir")
+    # get_plots_for_native_model_errors_bildinhalt("unknown_test_noisy_dir")
+    # get_plots_for_native_model_errors_bildinhalt("unknown_test_jpeg_dir")
     get_plots_for_weights("unknown_test_noisy_dir")
     get_plots_for_weights("unknown_test_jpeg_dir")
