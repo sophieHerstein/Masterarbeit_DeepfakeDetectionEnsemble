@@ -1,3 +1,4 @@
+"""Verdeckungen in den Bildern einfügen für Okklusionstests"""
 import os
 import random
 

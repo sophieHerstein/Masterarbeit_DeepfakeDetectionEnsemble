@@ -1,8 +1,8 @@
+"""Real-Bilder aus den Datensätzen in eigenen Datensatz überführen"""
 import os
-import random
 import shutil
 
-RNG = random.Random(42)
+from utils.config import RNG
 
 
 def copy_random_images(src_folder, dst_folder, n, name_prefix="image"):

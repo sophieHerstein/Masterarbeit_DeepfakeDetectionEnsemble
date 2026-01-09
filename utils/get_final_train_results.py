@@ -1,3 +1,4 @@
+"""finale Trainingsergebnisse mit der besten Validation Accuracy extrahieren für bessere Nachvollziehbarkeit"""
 import csv
 import os
 
@@ -24,7 +25,7 @@ for train_variante in TRAININGS_VARIANTEN:
         with open(out_file, "a", newline="") as logfile:
             writer = csv.writer(logfile)
             if not log_exists:
-                writer.writerow(["Modell", "Train-Acc", "Val-Acc", "Loss", "Eoche"])
+                writer.writerow(["Modell", "Train-Acc", "Val-Acc", "Loss", "Epoche"])
             writer.writerow([
                 model,
                 best_val_acc["Train-Acc"],

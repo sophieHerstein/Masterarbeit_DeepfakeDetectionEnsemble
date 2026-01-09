@@ -1,3 +1,4 @@
+"""Bilder für die Trainings auf indirekte Bildinhalte vorbereiten"""
 import os
 
 import numpy as np

@@ -1,9 +1,11 @@
+"""Bildaugmentierungen ausführen für die Tests"""
 import os
 
 import numpy as np
 from PIL import Image
-from config import TRAININGS_VARIANTEN, CONFIG
 from tqdm import tqdm
+
+from utils.config import CONFIG
 
 jpeg_quality = 50
 gaussian_noise_stddev = 25

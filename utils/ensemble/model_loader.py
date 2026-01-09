@@ -1,3 +1,4 @@
+"""Modelle laden"""
 import timm
 
 

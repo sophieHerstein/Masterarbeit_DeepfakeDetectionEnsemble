@@ -1,3 +1,4 @@
+"""Fake Insertion Bilder erzeugen"""
 import os
 import random
 
@@ -121,14 +122,10 @@ def run_insertion(input_dir, bg_dir, output_dir):
     print(f" Fertig! Ergebnisse gespeichert in: {output_dir}\n")
 
 
-def main():
+if __name__ == "__main__":
     print("=== Fake Insertion Test läuft ===\n")
 
     run_insertion(INPUT_FAKE_DIR_KNOWN, BACKGROUND_DIR_KNOWN, OUTPUT_KNOWN)
     run_insertion(INPUT_FAKE_DIR_UNKNOWN, BACKGROUND_DIR_UNKNOWN, OUTPUT_UNKNOWN)
 
     print("=== Alle Insertion-Tests abgeschlossen ===")
-
-
-if __name__ == "__main__":
-    main()

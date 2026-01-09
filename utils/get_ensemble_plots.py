@@ -1,3 +1,4 @@
+"""Plots für Ensemble Analyse erstellen"""
 import os
 
 import matplotlib.pyplot as plt

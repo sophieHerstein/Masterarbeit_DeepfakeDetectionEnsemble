@@ -1,3 +1,13 @@
+"""Konstantensammlung"""
+import os
+import random
+
+from dotenv import load_dotenv
+
+# huggingface Token
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
+
 CATEGORIES = ["human", "building", "landscape"]
 
 PREPROCESS_METHODS = ["grayscaling", "edges", "frequencies"]
@@ -41,6 +51,11 @@ TRAININGS_VARIANTEN = [
     *PREPROCESS_METHODS,
     "single_models"
 ]
+
+RNG = random.Random(42)
+
+STEPS = 40
+GUIDANCE_SCALE = 4.5
 
 TEST_VARIANTEN = [
     "known_test_dir",

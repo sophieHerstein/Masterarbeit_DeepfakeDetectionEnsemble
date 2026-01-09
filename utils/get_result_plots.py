@@ -1,3 +1,4 @@
+"""diverse Plots für Auswertung erzeugen"""
 import os
 from glob import glob
 

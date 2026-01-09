@@ -1,3 +1,5 @@
+"""Histogrammänderungen an Bildern ausführen für Tests"""
+
 import os
 
 import cv2

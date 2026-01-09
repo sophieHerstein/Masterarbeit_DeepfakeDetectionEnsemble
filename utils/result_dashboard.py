@@ -1,3 +1,4 @@
+"""Dashboard mit Test- und Trainingsergebnissen, vorrangig für besseren Überblick"""
 import os
 
 import matplotlib.pyplot as plt

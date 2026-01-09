@@ -1,3 +1,5 @@
+"""Unsplash Bilder aus Lizenzgründen vom lhq Datensatz entfernen"""
+
 import json
 import os
 

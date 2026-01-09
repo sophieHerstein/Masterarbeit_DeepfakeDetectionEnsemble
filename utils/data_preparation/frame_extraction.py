@@ -1,9 +1,8 @@
+"""Frames von den FaceForensics Bildern extrahieren"""
 import os
-import random
-
 import cv2
 
-RNG = random.Random(42)
+from utils.config import RNG
 
 frames_per_video = 1
 video_format = ".mp4"

@@ -1,3 +1,4 @@
+"""nachträgliche Ergänzung der Bildkategorien in Ensemble Logs"""
 import os
 from pathlib import Path
 

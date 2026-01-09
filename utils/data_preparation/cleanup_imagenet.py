@@ -1,3 +1,4 @@
+"""entfernt alle nicht Gebäude Bilder vom ImageNet Datensatz"""
 import os
 import shutil
 

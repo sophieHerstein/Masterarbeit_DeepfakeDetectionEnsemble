@@ -1,7 +1,8 @@
+"""Tetsordner mit Bildern vorbereiten"""
 import os
 import shutil
 
-from config import CONFIG, CATEGORIES
+from utils.config import CONFIG, CATEGORIES
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

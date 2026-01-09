@@ -1,3 +1,4 @@
+"""Inhaltsklassifizierer für die Gewichtung des Ensembles"""
 import os
 from dataclasses import dataclass
 

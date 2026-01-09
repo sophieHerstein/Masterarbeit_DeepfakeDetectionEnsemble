@@ -1,3 +1,4 @@
+"""Konvertierung der Formate für die Tests auf anderen Formaten"""
 import os
 
 import cv2

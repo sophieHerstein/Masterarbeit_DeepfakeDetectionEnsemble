@@ -1,3 +1,4 @@
+"""Hintergründe für Fake Insertion extrahieren"""
 import os
 import shutil
 
@@ -67,5 +68,5 @@ def extract_backgrounds(input_dir, output_dir):
 
 
 if __name__ == "__main__":
-    extract_backgrounds(input_dir=INPUT_DIRS[0], output_dir=OUTPUT_BACKGROUND_DIRs[0])
-    extract_backgrounds(input_dir=INPUT_DIRS[1], output_dir=OUTPUT_BACKGROUND_DIRs[1])
+    extract_backgrounds(INPUT_DIRS[0], OUTPUT_BACKGROUND_DIRs[0])
+    extract_backgrounds(INPUT_DIRS[1], OUTPUT_BACKGROUND_DIRs[1])
